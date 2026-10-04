@@ -272,13 +272,13 @@ export default function CandidateDrawer({
 
                   <div>
                     <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
-                      UTR / Direct UPI Ref
+                      UTR / Direct UPI Ref <span className="text-zinc-400 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
                       value={editUtr}
                       onChange={(e) => setEditUtr(e.target.value)}
-                      placeholder="e.g. 427819..."
+                      placeholder="Optional (leave empty)"
                       className="w-full text-xs bg-white border border-zinc-300 rounded-lg p-2 font-mono text-zinc-900 focus:border-zinc-900 outline-none"
                     />
                   </div>

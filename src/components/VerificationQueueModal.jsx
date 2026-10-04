@@ -233,8 +233,8 @@ export default function VerificationQueueModal({
                               <span className="select-all">{item.utrNumber}</span>
                             </span>
                           ) : (
-                            <span className="text-[11px] font-mono text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                              UTR: Pending Caller Entry
+                            <span className="text-[11px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              Payment Confirmed
                             </span>
                           )}
 

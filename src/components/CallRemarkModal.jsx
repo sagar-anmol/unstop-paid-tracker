@@ -4,6 +4,7 @@ import {
   Phone, 
   PhoneCall, 
   Check, 
+  CheckCircle2,
   AlertCircle, 
   Sparkles,
   Smartphone,
@@ -93,7 +94,7 @@ export default function CallRemarkModal({
         amountPaid: Number(amountPaid) || 199
       },
       callerUser: currentUser,
-      remark: remark.trim() || 'Call completed.',
+      remark: remark.trim() || (selectedStatus === 'PAYMENT_CLAIMED' ? 'Payment completed and confirmed.' : 'Call completed.'),
       leadNumber: leadNumber.trim(),
       status: selectedStatus
     });
@@ -348,33 +349,37 @@ export default function CallRemarkModal({
             )}
           </div>
 
-          {/* Payment & UTR Details (Sliet Hub Meeting Action Item) */}
+          {/* Payment & UTR Details */}
           {selectedStatus === 'PAYMENT_CLAIMED' && (
             <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-3 animate-in fade-in duration-150">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
                   <span className="font-semibold text-xs text-emerald-900">
-                    Payment Verification & UTR Details
+                    Payment Completed Confirmation
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-emerald-700 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Saturday Batch Verification
+                <span className="text-[10px] font-mono text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-300 font-semibold">
+                  No UTR Required
                 </span>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-white/90 border border-emerald-200 text-xs text-emerald-900 flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Candidate confirmed payment completed. Simply click <strong>Confirm Payment Completed</strong> below.</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-[11px] font-medium text-emerald-900 mb-1">
-                    UTR / Transaction Ref No <span className="text-rose-500">*</span>
+                    UTR / Ref No <span className="text-slate-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="text"
                     value={utrNumber}
                     onChange={(e) => setUtrNumber(e.target.value)}
-                    placeholder="e.g. 427189034211"
+                    placeholder="Optional (leave blank)"
                     className="w-full bg-white border border-emerald-300 rounded-lg px-2.5 py-1.5 text-xs font-mono text-emerald-950 outline-none focus:border-emerald-700"
-                    required
                   />
                 </div>
 
@@ -397,8 +402,8 @@ export default function CallRemarkModal({
 
               <div className="flex items-center justify-between text-[11px] text-emerald-800 pt-1 border-t border-emerald-200/60">
                 <span className="flex items-center gap-1 font-medium">
-                  <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                  Verification Scheduled for Saturday
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  Ready to confirm payment
                 </span>
                 <span className="font-mono text-[10px]">Fee: ₹{amountPaid}</span>
               </div>
@@ -420,9 +425,22 @@ export default function CallRemarkModal({
               type="submit"
               size="sm"
               disabled={!selectedStatus}
-              className={selectedStatus ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs' : ''}
+              className={
+                selectedStatus === 'PAYMENT_CLAIMED'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs font-semibold'
+                  : selectedStatus
+                  ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-xs'
+                  : ''
+              }
             >
-              Save Call Record
+              {selectedStatus === 'PAYMENT_CLAIMED' ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 mr-1 text-white" />
+                  <span>Confirm Payment Completed</span>
+                </>
+              ) : (
+                'Save Call Record'
+              )}
             </Button>
           </DialogFooter>
 
