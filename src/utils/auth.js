@@ -17,15 +17,22 @@ export const DOMAINS_DIRECTORY = {
     tagline: 'Full-Contact Mecha Battles, Drones & Autonomous Navigation',
     accentColor: '#38BDF8',
     events: [
-      'Robowar',
-      'Rapid Line',
-      'Rapid Line (LFR)',
-      'Sky Maneuver',
-      'Hovermania',
       'RoboSoccer',
+      'RC Car Race',
+      'Sky Maneuver',
+      'Robowars',
+      'Hover-Mania',
+      'Remote Control Surface Boat Race',
+      'Rapid Line',
+      'Micromouse Challenge'
+    ],
+    aliases: [
+      'Robo Soccer',
+      'Robowar',
+      'Hovermania',
       'RC Boat',
       'RC Car',
-      'Micromouse Challenge'
+      'Rapid Line (LFR)'
     ]
   },
   plexus: {
@@ -37,16 +44,20 @@ export const DOMAINS_DIRECTORY = {
     tagline: 'Competitive Coding, AI Systems, Reverse Engineering & Web Sprints',
     accentColor: '#818CF8',
     events: [
-      'Competitive Programming Marathon',
-      'Ghost Code',
-      'Pixel Wizard',
-      'Machine Learning Model',
       'The Neural Nexus',
       'Debug and Deploy',
-      'Debug & Deploy',
-      'AI Chit-Chat',
+      'Pixel Wizard',
       'Heuristic Havoc',
-      'Logic Flow'
+      'The Aqua-Epoch',
+      'Ghost Code'
+    ],
+    aliases: [
+      'Debug & Deploy',
+      'Logic Flow',
+      'Competitive Programming Marathon',
+      'Machine Learning Model',
+      'AI Chit-Chat',
+      'Aqua-Epoch'
     ]
   },
   karyarachna: {
@@ -58,9 +69,13 @@ export const DOMAINS_DIRECTORY = {
     tagline: 'Circular Prototyping, 36h Hackathon & Sustainable Jugaad',
     accentColor: '#C084FC',
     events: [
-      'Kritrim - Model Exhibition',
+      'Kritrim- Model Exhibition',
       'Hackathon',
       'Jugaad'
+    ],
+    aliases: [
+      'Kritrim - Model Exhibition',
+      'Kritrim'
     ]
   },
   kermis: {
@@ -75,7 +90,8 @@ export const DOMAINS_DIRECTORY = {
       'BGMI',
       'Free Fire',
       'Chess'
-    ]
+    ],
+    aliases: []
   },
   genesis: {
     id: 'genesis',
@@ -87,9 +103,12 @@ export const DOMAINS_DIRECTORY = {
     accentColor: '#FBBF24',
     events: [
       'Pitchverse',
-      'Pitchverse - Virtual Strategy',
       'Case Crack',
       'Brand Blitz',
+      'Ethical Crosstalk'
+    ],
+    aliases: [
+      'Pitchverse - Virtual Strategy',
       'Case Ethical Crosstalk'
     ]
   },
@@ -103,10 +122,11 @@ export const DOMAINS_DIRECTORY = {
     accentColor: '#34D399',
     events: [
       'Circuit Craft',
-      'Digital Design Challenge',
       'Innovation-X',
-      'Arduino Imagino'
-    ]
+      'Arduino Imagino',
+      'Digital Design Challenge'
+    ],
+    aliases: []
   },
   electrica: {
     id: 'electrica',
@@ -120,8 +140,10 @@ export const DOMAINS_DIRECTORY = {
       'Soldering Speedrun',
       'Breadboard Battle',
       'Grid Masters-SLD Challenge',
-      'Grid Masters - SLD Challenge',
       'WPTC - Wireless Power Transfer'
+    ],
+    aliases: [
+      'Grid Masters - SLD Challenge'
     ]
   },
   mechanica: {
@@ -133,11 +155,12 @@ export const DOMAINS_DIRECTORY = {
     tagline: 'Precision 3D CAD Modeling, High-Load Hydraulics & Mechnovate',
     accentColor: '#FB923C',
     events: [
-      'Mechnovate',
       'Designare',
       'Hydraload',
-      'Fabriquer'
-    ]
+      'Fabriquer',
+      'Mechnovate'
+    ],
+    aliases: []
   },
   chemica: {
     id: 'chemica',
@@ -152,6 +175,10 @@ export const DOMAINS_DIRECTORY = {
       'Soap Making',
       'Jam Session',
       'Chemi-Mystery',
+      'Chemi-Craft',
+      'Paper and Poster Presentation'
+    ],
+    aliases: [
       'Chemi Craft',
       'Poster and Paper Presentation'
     ]
@@ -171,6 +198,10 @@ export const DOMAINS_DIRECTORY = {
       'CAD Design Challenge',
       'Technical Quiz Competition',
       'Poster Presentation'
+    ],
+    aliases: [
+      'City Model Exibition',
+      'Technical Quiz Competation'
     ]
   },
   inventia: {
@@ -182,10 +213,14 @@ export const DOMAINS_DIRECTORY = {
     tagline: 'Cross-Disciplinary Earth Solutions, Smart Agriculture & Techno-Vation',
     accentColor: '#4ADE80',
     events: [
+      'Ideathon',
       'Techno-Vation',
+      'Cognitive Challenges'
+    ],
+    aliases: [
       'Smart Agriculture (SM-Agri)',
       'SM-Agri',
-      'Cognitive Challenges'
+      'Smart Agriculture'
     ]
   },
   foodocrats: {
@@ -202,7 +237,8 @@ export const DOMAINS_DIRECTORY = {
       'Clue Craze',
       'Foodprint',
       'Tech4Earth'
-    ]
+    ],
+    aliases: []
   },
   atomheimer: {
     id: 'atomheimer',
@@ -213,13 +249,14 @@ export const DOMAINS_DIRECTORY = {
     tagline: 'Financial Modeling (The Big Bull), Aqua Aerodynamics & Science Quizzes',
     accentColor: '#60A5FA',
     events: [
-      'The Big Bull',
-      'The Big Bull (Diploma Students Only)',
+      'Quiz Nova',
       'Aqua Clean',
-      'The Aqua-Epoch',
       'Splash Rocket',
       'Aerostrike',
-      'Quiz Nova'
+      'The Big Bull'
+    ],
+    aliases: [
+      'The Big Bull (Diploma Students Only)'
     ]
   }
 };
@@ -842,14 +879,8 @@ export function authenticateUser(usernameInput, passwordInput) {
  */
 export function isEventInDomain(domainId, eventName) {
   if (!domainId || !eventName) return false;
-  const domain = DOMAINS_DIRECTORY[domainId];
-  if (!domain) return false;
-
-  const target = eventName.toLowerCase().trim();
-  return domain.events.some(ev => {
-    const evLower = ev.toLowerCase().trim();
-    return target === evLower || target.includes(evLower) || evLower.includes(target);
-  });
+  const resolved = getDomainForEvent(eventName);
+  return resolved ? resolved.id === domainId : false;
 }
 
 /**
@@ -859,13 +890,30 @@ export function getDomainForEvent(eventName) {
   if (!eventName) return null;
   const target = eventName.toLowerCase().trim();
 
+  // 1. Direct exact match on canonical official events across all domains
   for (const [dId, dInfo] of Object.entries(DOMAINS_DIRECTORY)) {
-    const match = dInfo.events.some(ev => {
+    const match = dInfo.events.some(ev => target === ev.toLowerCase().trim());
+    if (match) return dInfo;
+  }
+
+  // 2. Direct exact match on aliases across all domains
+  for (const [dId, dInfo] of Object.entries(DOMAINS_DIRECTORY)) {
+    if (dInfo.aliases && Array.isArray(dInfo.aliases)) {
+      const match = dInfo.aliases.some(ev => target === ev.toLowerCase().trim());
+      if (match) return dInfo;
+    }
+  }
+
+  // 3. Fallback substring match across all events and aliases
+  for (const [dId, dInfo] of Object.entries(DOMAINS_DIRECTORY)) {
+    const allEvents = [...dInfo.events, ...(dInfo.aliases || [])];
+    const match = allEvents.some(ev => {
       const evLower = ev.toLowerCase().trim();
-      return target === evLower || target.includes(evLower) || evLower.includes(target);
+      return target.includes(evLower) || evLower.includes(target);
     });
     if (match) return dInfo;
   }
+
   return null;
 }
 
