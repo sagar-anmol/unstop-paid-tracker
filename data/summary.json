@@ -1,14 +1,14 @@
 {
-  "last_synced_at": "2026-10-04T00:18:19.207530+00:00",
-  "token_expires_at": "2026-10-05T00:18:20.089986+00:00",
+  "last_synced_at": "2026-10-04T07:39:12.105788+00:00",
+  "token_expires_at": "2026-10-05T07:39:13.092920+00:00",
   "auth_mode": "automated_login",
-  "total_unstop_registrations": 3846,
-  "total_paid_registrations": 842,
-  "total_incomplete_registrations": 3004,
+  "total_unstop_registrations": 3860,
+  "total_paid_registrations": 858,
+  "total_incomplete_registrations": 3002,
   "total_amount_collected": 4392.0,
   "total_colleges": 259,
   "total_events_scanned": 63,
-  "events_with_paid": 54,
+  "events_with_paid": 55,
   "events_list": [
     {
       "id": 1765475,
@@ -31,8 +31,8 @@
       "title": "Technical Quiz Competition",
       "type": "competitions",
       "total_registrations": 63,
-      "paid_registrations": 6,
-      "incomplete_registrations": 57
+      "paid_registrations": 7,
+      "incomplete_registrations": 56
     },
     {
       "id": 1744809,
@@ -46,8 +46,8 @@
       "id": 1744782,
       "title": "Quiz Nova",
       "type": "quizzes",
-      "total_registrations": 118,
-      "paid_registrations": 52,
+      "total_registrations": 119,
+      "paid_registrations": 53,
       "incomplete_registrations": 66
     },
     {
@@ -62,8 +62,8 @@
       "id": 1744779,
       "title": "Tech4Earth",
       "type": "competitions",
-      "total_registrations": 115,
-      "paid_registrations": 38,
+      "total_registrations": 117,
+      "paid_registrations": 40,
       "incomplete_registrations": 77
     },
     {
@@ -86,8 +86,8 @@
       "id": 1744776,
       "title": "Food Forensics",
       "type": "competitions",
-      "total_registrations": 70,
-      "paid_registrations": 15,
+      "total_registrations": 71,
+      "paid_registrations": 16,
       "incomplete_registrations": 55
     },
     {
@@ -127,8 +127,8 @@
       "title": "Poster Presentation",
       "type": "competitions",
       "total_registrations": 54,
-      "paid_registrations": 5,
-      "incomplete_registrations": 49
+      "paid_registrations": 6,
+      "incomplete_registrations": 48
     },
     {
       "id": 1744769,
@@ -158,9 +158,9 @@
       "id": 1744757,
       "title": "Chess",
       "type": "competitions",
-      "total_registrations": 74,
-      "paid_registrations": 15,
-      "incomplete_registrations": 59
+      "total_registrations": 75,
+      "paid_registrations": 17,
+      "incomplete_registrations": 58
     },
     {
       "id": 1744238,
@@ -222,9 +222,9 @@
       "id": 1744227,
       "title": "Hackathon",
       "type": "hackathons",
-      "total_registrations": 76,
+      "total_registrations": 77,
       "paid_registrations": 4,
-      "incomplete_registrations": 72
+      "incomplete_registrations": 73
     },
     {
       "id": 1744224,
@@ -254,8 +254,8 @@
       "id": 1744220,
       "title": "Debug and Deploy",
       "type": "competitions",
-      "total_registrations": 116,
-      "paid_registrations": 14,
+      "total_registrations": 117,
+      "paid_registrations": 15,
       "incomplete_registrations": 102
     },
     {
@@ -278,25 +278,25 @@
       "id": 1744216,
       "title": "Ghost Code",
       "type": "competitions",
-      "total_registrations": 80,
+      "total_registrations": 81,
       "paid_registrations": 75,
-      "incomplete_registrations": 5
+      "incomplete_registrations": 6
     },
     {
       "id": 1744215,
       "title": "Heuristic Havoc",
       "type": "competitions",
-      "total_registrations": 58,
-      "paid_registrations": 9,
-      "incomplete_registrations": 49
+      "total_registrations": 60,
+      "paid_registrations": 12,
+      "incomplete_registrations": 48
     },
     {
       "id": 1744214,
       "title": "Breadboard Battle",
       "type": "competitions",
       "total_registrations": 56,
-      "paid_registrations": 0,
-      "incomplete_registrations": 56
+      "paid_registrations": 1,
+      "incomplete_registrations": 55
     },
     {
       "id": 1744213,
@@ -478,17 +478,17 @@
       "id": 1744148,
       "title": "BGMI",
       "type": "competitions",
-      "total_registrations": 77,
-      "paid_registrations": 4,
+      "total_registrations": 78,
+      "paid_registrations": 5,
       "incomplete_registrations": 73
     },
     {
       "id": 1744147,
       "title": "Free Fire",
       "type": "competitions",
-      "total_registrations": 101,
-      "paid_registrations": 20,
-      "incomplete_registrations": 81
+      "total_registrations": 104,
+      "paid_registrations": 22,
+      "incomplete_registrations": 82
     },
     {
       "id": 1743774,
