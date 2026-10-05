@@ -458,6 +458,7 @@ export default function App() {
           setSelectedEventFilter('');
         }}
         verificationCount={pendingVerificationCount}
+        attendeeCount={scopedParticipants.length}
         theme={theme}
         onToggleTheme={toggleTheme}
         summary={summary}
@@ -498,9 +499,9 @@ export default function App() {
 
             {/* 4. Master Operations Data Table with Direct Calling & Domain Awareness */}
             <DataTable
-              key={`${activeDomainId || 'all'}_${selectedEventFilter}`}
+              key={activeDomainId || 'all'}
               callDbVersion={callDbVersion}
-              participants={displayedParticipants}
+              participants={scopedParticipants}
               summary={summary}
               currentUser={currentUser}
               activeDomainId={activeDomainId}

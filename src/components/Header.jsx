@@ -46,6 +46,7 @@ export default function Header({
   selectedDomainOverride,
   onSelectDomainOverride,
   verificationCount = 0,
+  attendeeCount,
   theme,
   onToggleTheme,
   summary,
@@ -102,7 +103,7 @@ export default function Header({
               href="#candidates-table" 
               className="px-2.5 py-1 rounded-md hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
             >
-              Attendees ({Number(summary?.total_unstop_registrations || summary?.totalCount || 3860).toLocaleString('en-IN')})
+              Attendees ({Number(attendeeCount || summary?.total_unstop_registrations || summary?.totalCount || 4090).toLocaleString('en-IN')})
             </a>
             <button
               onClick={onOpenVerificationQueue}

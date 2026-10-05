@@ -84,17 +84,33 @@ export default function DataTable({
     return { all: participants.length, paid, incomplete, free: Math.max(0, participants.length - paid - incomplete) };
   }, [participants]);
 
-  // Master events list for dropdown
+  // Master events list for dropdown (guaranteed to include all domain events)
   const masterEvents = useMemo(() => {
     const eventCounts = {};
+    if (activeDomain && activeDomain.events) {
+      activeDomain.events.forEach(ev => {
+        eventCounts[ev] = 0;
+      });
+    }
+
     participants.forEach(p => {
       const name = (p.event_name || 'Event').trim();
-      eventCounts[name] = (eventCounts[name] || 0) + 1;
+      let matchedKey = name;
+      if (activeDomain && activeDomain.events) {
+        const canonical = activeDomain.events.find(ev => ev.toLowerCase() === name.toLowerCase());
+        if (canonical) matchedKey = canonical;
+      }
+      eventCounts[matchedKey] = (eventCounts[matchedKey] || 0) + 1;
     });
 
-    const sortedEvents = Object.keys(eventCounts).sort((a, b) => eventCounts[b] - eventCounts[a]);
+    const sortedEvents = Object.keys(eventCounts).sort((a, b) => (eventCounts[b] || 0) - (eventCounts[a] || 0));
     return { sortedEvents, eventCounts };
-  }, [participants]);
+  }, [participants, activeDomain]);
+
+  // Reset pagination to page 1 whenever any filter, search or sorting changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, selectedPayment, selectedCallStatus, selectedEvent, selectedCollege, sortBy]);
 
   // Colleges list
   const collegesList = useMemo(() => {
@@ -135,7 +151,14 @@ export default function DataTable({
       }
 
       // 4. Event
-      if (selectedEvent && (p.event_name || '').trim() !== selectedEvent) return false;
+      if (selectedEvent) {
+        const pEv = (p.event_name || '').trim().toLowerCase();
+        const selEv = selectedEvent.trim().toLowerCase();
+        if (pEv !== selEv) {
+          const isMatch = activeDomain?.events?.some(ev => ev.toLowerCase() === selEv && (pEv === ev.toLowerCase() || pEv.includes(ev.toLowerCase())));
+          if (!isMatch) return false;
+        }
+      }
 
       // 5. College
       if (selectedCollege && (p.college || '').trim() !== selectedCollege) return false;
@@ -831,21 +854,21 @@ export default function DataTable({
             <Button
               variant="outline"
               size="iconSm"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage <= 1 || pageSize === 'all'}
-              className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs"
+              onClick={() => setCurrentPage(Math.max(1, effectivePage - 1))}
+              disabled={effectivePage <= 1 || pageSize === 'all'}
+              className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </Button>
-            <span className="px-2 text-slate-700 font-medium">
+            <span className="px-2 text-slate-700 font-medium select-none">
               Page {effectivePage} of {totalPages}
             </span>
             <Button
               variant="outline"
               size="iconSm"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages || pageSize === 'all'}
-              className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs"
+              onClick={() => setCurrentPage(Math.min(totalPages, effectivePage + 1))}
+              disabled={effectivePage >= totalPages || pageSize === 'all'}
+              className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </Button>
