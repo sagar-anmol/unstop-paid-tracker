@@ -357,83 +357,29 @@ export function setCustomDeviceName(name) {
 // Instagram-style "Where You're Logged In" Session Tracking Engine
 // -----------------------------------------------------------------
 
-const SEED_LOGIN_SESSIONS = [
-  {
-    id: 'sess_oppo_f31_plexus',
-    username: 'plexus',
-    userName: 'Plexus (Robowars Bay)',
-    teamName: 'Robowars & RC Bay',
-    role: 'domain_head',
-    deviceModel: 'OPPO F31 5G',
-    browser: 'Chrome Mobile',
-    os: 'Android 14 / ColorOS',
-    deviceType: 'mobile',
-    ip: '103.24.120.45',
-    location: 'Sangrur, Punjab',
-    fullLocation: 'Sangrur, Punjab, India',
-    isp: 'Reliance Jio 5G',
-    loginTime: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    isCurrentDevice: false
-  },
-  {
-    id: 'sess_seed_2',
-    username: 'mechanica',
-    userName: 'Priya Sharma',
-    teamName: 'Mechanica Bay',
-    role: 'domain_head',
-    deviceModel: 'Samsung Galaxy S24',
-    browser: 'Chrome Mobile',
-    os: 'Android 14',
-    deviceType: 'mobile',
-    ip: '49.36.182.91',
-    location: 'Ludhiana, Punjab',
-    fullLocation: 'Ludhiana, Punjab, India',
-    isp: 'Bharti Airtel',
-    loginTime: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    isCurrentDevice: false
-  },
-  {
-    id: 'sess_macbook_raj',
-    username: 'raj.aryan',
-    userName: 'Raj Aryan',
-    teamName: 'Central Desk',
-    role: 'super_admin',
-    deviceModel: 'MacBook Pro 14"',
-    browser: 'Chrome / Safari',
-    os: 'macOS Sonoma',
-    deviceType: 'desktop',
-    ip: '103.112.54.21',
-    location: 'Sangrur, Punjab',
-    fullLocation: 'Sangrur, Punjab, India',
-    isp: 'SLIET Campus Wi-Fi',
-    loginTime: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    isCurrentDevice: false
-  }
-];
+const SEED_LOGIN_SESSIONS = [];
 
 export function getActiveLoginSessions() {
   try {
     const raw = localStorage.getItem(SESSIONS_KEY);
     if (raw) {
       const list = JSON.parse(raw);
-      if (Array.isArray(list) && list.length > 0) {
-        // Ensure Oppo F31 Plexus session is present in list
-        const hasPlexus = list.some(s => s.username === 'plexus' || (s.deviceModel && s.deviceModel.includes('OPPO')));
-        if (!hasPlexus) {
-          list.unshift(SEED_LOGIN_SESSIONS[0]);
-        }
-        return list;
+      if (Array.isArray(list)) {
+        return list.filter(s => s && s.id !== 'sess_seed_2' && s.id !== 'sess_oppo_f31_plexus' && s.id !== 'sess_macbook_raj');
       }
     }
   } catch (e) {
     // ignore
   }
-  return SEED_LOGIN_SESSIONS;
+  return [];
 }
 
 export function saveActiveLoginSessions(sessions) {
   try {
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+    const clean = Array.isArray(sessions) 
+      ? sessions.filter(s => s && s.id !== 'sess_seed_2' && s.id !== 'sess_oppo_f31_plexus' && s.id !== 'sess_macbook_raj')
+      : [];
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(clean));
   } catch (e) {
     console.error('Error saving login sessions:', e);
   }
@@ -444,8 +390,9 @@ export function saveActiveLoginSessions(sessions) {
  */
 export async function fetchCloudLoginSessions() {
   try {
-    const cloudSessions = await fetchDeviceSessionsFromNeon();
-    if (cloudSessions && cloudSessions.length > 0) {
+    const rawCloudSessions = await fetchDeviceSessionsFromNeon();
+    const cloudSessions = (rawCloudSessions || []).filter(s => s && s.id !== 'sess_seed_2' && s.id !== 'sess_oppo_f31_plexus' && s.id !== 'sess_macbook_raj');
+    if (cloudSessions.length > 0) {
       const local = getActiveLoginSessions();
       const currentDev = getDeviceInfo();
       

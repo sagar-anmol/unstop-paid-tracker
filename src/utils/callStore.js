@@ -72,170 +72,30 @@ const CALL_RECORDS_KEY = 'tf_call_records_v2';
 const AUDIT_LOGS_KEY = 'tf_audit_logs_v2';
 const MANUAL_VERIFICATIONS_KEY = 'tf_payment_verifications_v2';
 
-// Realistic sample seed data to demonstrate calling history & timeline immediately
-const INITIAL_CALL_RECORDS_SEED = {
-  // Sample participant with 4 calls by Invitation and Outreach teams as requested by Sagar
-  'p_demo_seed_1': {
-    participantId: 'p_demo_seed_1',
-    callCount: 4,
-    lastCalledAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-    lastStatus: 'PAYMENT_CLAIMED',
-    lastRemark: 'Participant said paid ₹199 via UPI to TechFEST QR. Sent screenshot to WhatsApp.',
-    leadNumber: '9876543210',
-    claimedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-    history: [
-      {
-        id: 'call_1',
-        callNumber: 1,
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 28).toISOString(),
-        callerName: 'Priya Sharma',
-        callerRole: 'team_head',
-        callerTeam: 'Invitation Team',
-        status: 'NOT_PICKED',
-        remark: 'Ringing, no response. Will retry in evening.',
-        leadNumber: '',
-        device: 'Apple iPhone • Safari',
-        deviceType: 'mobile',
-        location: 'Sangrur, Punjab',
-        ip: '103.24.120.45'
-      },
-      {
-        id: 'call_2',
-        callNumber: 2,
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(),
-        callerName: 'Rohit Kumar',
-        callerRole: 'team_member',
-        callerTeam: 'Outreach Team',
-        status: 'CALL_LATER',
-        remark: 'Candidate was in college lectures. Asked to call back after 6 PM.',
-        leadNumber: '9876543210',
-        device: 'Samsung Galaxy S24 • Chrome',
-        deviceType: 'mobile',
-        location: 'Ludhiana, Punjab',
-        ip: '49.36.182.91'
-      },
-      {
-        id: 'call_3',
-        callNumber: 3,
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-        callerName: 'Priya Sharma',
-        callerRole: 'team_head',
-        callerTeam: 'Invitation Team',
-        status: 'INTERESTED',
-        remark: 'Convinced for Robowars track. Explaining prize pool. Promised to pay tonight.',
-        leadNumber: '9876543210',
-        device: 'Apple iPhone • Safari',
-        deviceType: 'mobile',
-        location: 'Sangrur, Punjab',
-        ip: '103.24.120.45'
-      },
-      {
-        id: 'call_4',
-        callNumber: 4,
-        timestamp: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-        callerName: 'Raj Aryan',
-        callerRole: 'super_admin',
-        callerTeam: 'Central Desk',
-        status: 'PAYMENT_CLAIMED',
-        remark: 'Participant said paid ₹199 via UPI to TechFEST QR. Sent screenshot to WhatsApp.',
-        leadNumber: '9876543210',
-        device: 'MacBook / Mac • Chrome',
-        deviceType: 'desktop',
-        location: 'Sangrur, Punjab',
-        ip: '103.112.54.21'
-      }
-    ]
-  }
-};
-
-const INITIAL_AUDIT_LOGS_SEED = [
-  {
-    id: 'log_seed_4',
-    timestamp: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-    actorName: 'Raj Aryan',
-    actorRole: 'super_admin',
-    actorTeam: 'Central Desk',
-    action: 'LOG_CALL',
-    targetId: 'p_demo_seed_1',
-    targetName: 'Aarav Sharma',
-    eventName: 'Robowars Championship',
-    prevStatus: 'INTERESTED',
-    nextStatus: 'PAYMENT_CLAIMED',
-    device: 'MacBook / Mac • Chrome',
-    deviceType: 'desktop',
-    location: 'Sangrur, Punjab',
-    ip: '103.112.54.21',
-    details: 'Logged Call #4 via MacBook / Mac • Chrome (📍 Sangrur, Punjab). Status changed to Payment Completed (Sent to Verification Desk).'
-  },
-  {
-    id: 'log_seed_3',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-    actorName: 'Priya Sharma',
-    actorRole: 'team_head',
-    actorTeam: 'Invitation Team',
-    action: 'LOG_CALL',
-    targetId: 'p_demo_seed_1',
-    targetName: 'Aarav Sharma',
-    eventName: 'Robowars Championship',
-    prevStatus: 'CALL_LATER',
-    nextStatus: 'INTERESTED',
-    device: 'Apple iPhone • Safari',
-    deviceType: 'mobile',
-    location: 'Sangrur, Punjab',
-    ip: '103.24.120.45',
-    details: 'Logged Call #3 via Apple iPhone • Safari (📍 Sangrur, Punjab). Marked Interested / Follow Up.'
-  },
-  {
-    id: 'log_seed_2',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(),
-    actorName: 'Rohit Kumar',
-    actorRole: 'team_member',
-    actorTeam: 'Outreach Team',
-    action: 'LOG_CALL',
-    targetId: 'p_demo_seed_1',
-    targetName: 'Aarav Sharma',
-    eventName: 'Robowars Championship',
-    prevStatus: 'NOT_PICKED',
-    nextStatus: 'CALL_LATER',
-    device: 'Samsung Galaxy S24 • Chrome',
-    deviceType: 'mobile',
-    location: 'Ludhiana, Punjab',
-    ip: '49.36.182.91',
-    details: 'Logged Call #2 via Samsung Galaxy S24 • Chrome (📍 Ludhiana, Punjab). Callback scheduled.'
-  },
-  {
-    id: 'log_seed_1',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 28).toISOString(),
-    actorName: 'Priya Sharma',
-    actorRole: 'team_head',
-    actorTeam: 'Invitation Team',
-    action: 'LOG_CALL',
-    targetId: 'p_demo_seed_1',
-    targetName: 'Aarav Sharma',
-    eventName: 'Robowars Championship',
-    prevStatus: 'NONE',
-    nextStatus: 'NOT_PICKED',
-    device: 'Apple iPhone • Safari',
-    deviceType: 'mobile',
-    location: 'Sangrur, Punjab',
-    ip: '103.24.120.45',
-    details: 'Logged Call #1 via Apple iPhone • Safari (📍 Sangrur, Punjab). Participant did not pick up.'
-  }
-];
+const INITIAL_CALL_RECORDS_SEED = {};
+const INITIAL_AUDIT_LOGS_SEED = [];
 
 export function getCallRecords() {
   try {
     const raw = localStorage.getItem(CALL_RECORDS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const records = JSON.parse(raw);
+      if (records && typeof records === 'object') {
+        delete records['p_demo_seed_1'];
+        return records;
+      }
+    }
   } catch (e) {
     console.error('Error loading call records:', e);
   }
-  return INITIAL_CALL_RECORDS_SEED;
+  return {};
 }
 
 export function saveCallRecords(records) {
   try {
-    localStorage.setItem(CALL_RECORDS_KEY, JSON.stringify(records));
+    const cleanRecords = { ...records };
+    delete cleanRecords['p_demo_seed_1'];
+    localStorage.setItem(CALL_RECORDS_KEY, JSON.stringify(cleanRecords));
   } catch (e) {
     console.error('Error saving call records:', e);
   }
@@ -243,22 +103,30 @@ export function saveCallRecords(records) {
 
 export function getParticipantCallRecord(participantId, defaultId = null) {
   const records = getCallRecords();
-  return records[participantId] || (defaultId ? records[defaultId] : null);
+  return records[participantId] || (defaultId && defaultId !== 'p_demo_seed_1' ? records[defaultId] : null);
 }
 
 export function getAuditLogs() {
   try {
     const raw = localStorage.getItem(AUDIT_LOGS_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const logs = JSON.parse(raw);
+      if (Array.isArray(logs)) {
+        return logs.filter(l => l && l.targetId !== 'p_demo_seed_1' && !String(l.id).startsWith('log_seed_'));
+      }
+    }
   } catch (e) {
     console.error('Error loading audit logs:', e);
   }
-  return INITIAL_AUDIT_LOGS_SEED;
+  return [];
 }
 
 export function saveAuditLogs(logs) {
   try {
-    localStorage.setItem(AUDIT_LOGS_KEY, JSON.stringify(logs));
+    const cleanLogs = Array.isArray(logs)
+      ? logs.filter(l => l && l.targetId !== 'p_demo_seed_1' && !String(l.id).startsWith('log_seed_'))
+      : [];
+    localStorage.setItem(AUDIT_LOGS_KEY, JSON.stringify(cleanLogs));
   } catch (e) {
     console.error('Error saving audit logs:', e);
   }
@@ -312,6 +180,7 @@ export async function syncWithNeonDatabase() {
     const mergedRecords = { ...localRecords };
 
     Object.entries(neonCalls).forEach(([pId, neonRec]) => {
+      if (pId === 'p_demo_seed_1') return; // Ignore any demo seed from cloud
       if (!mergedRecords[pId]) {
         mergedRecords[pId] = neonRec;
       } else {
@@ -341,10 +210,11 @@ export async function syncWithNeonDatabase() {
     saveCallRecords(mergedRecords);
 
     // 2. Merge audit logs
-    if (neonAudits && neonAudits.length > 0) {
+    const cleanNeonAudits = (neonAudits || []).filter(a => a && a.targetId !== 'p_demo_seed_1' && !String(a.id).startsWith('log_seed_'));
+    if (cleanNeonAudits.length > 0) {
       const localAudits = getAuditLogs();
-      const seenAuditIds = new Set(neonAudits.map(a => a.id));
-      const combined = [...neonAudits];
+      const seenAuditIds = new Set(cleanNeonAudits.map(a => a.id));
+      const combined = [...cleanNeonAudits];
       localAudits.forEach(a => {
         if (!seenAuditIds.has(a.id)) {
           combined.push(a);

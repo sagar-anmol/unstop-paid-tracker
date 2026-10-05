@@ -42,9 +42,12 @@ export default function AntiGravityReportModal({
     p.payment_status === 'UNPAID' || 
     (p.status_label && p.status_label.toLowerCase().includes('not paid'))
   ).length;
-  const completedCount = totalCount - incompleteCount;
+  const completedCount = Math.max(0, totalCount - incompleteCount);
   const gatewayRevenue = participants.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const pipelineValue = incompleteCount * 199;
+  const verifiedReceiptsCount = participants.filter(p => Number(p.amount) > 0).length;
+  const completedPct = totalCount > 0 ? ((completedCount / totalCount) * 100).toFixed(1) : '0.0';
+  const incompletePct = totalCount > 0 ? ((incompleteCount / totalCount) * 100).toFixed(1) : '0.0';
 
   const handlePrint = () => {
     window.print();
@@ -54,17 +57,17 @@ export default function AntiGravityReportModal({
     const md = `# techFEST '26 — Anti-Gravity Operations Intelligence Report
 **Author:** Raj Aryan (Technical Secretariat)
 **Submitted To:** Sliet Hub & Executive Council
-**Date:** October 2, 2026
-**Sync Cycle:** Live Unstop Dataset (3,673 Records)
+**Date:** October 2026
+**Sync Cycle:** Live Unstop Dataset (${totalCount.toLocaleString('en-IN')} Records)
 
 ---
 
 ## 1. Executive Metric Summary
 * **Total Scanned Registrations:** ${totalCount.toLocaleString('en-IN')}
-* **Direct Gateway Revenue Collected:** ₹${gatewayRevenue.toLocaleString('en-IN')} (4 Verified Receipts)
-* **Recoverable Calling Pipeline:** ₹${pipelineValue.toLocaleString('en-IN')} (2,988 Leads @ ₹199)
-* **Completed Registrations:** ${completedCount.toLocaleString('en-IN')} (18.7%)
-* **Fee Not Paid / Drop-offs:** ${incompleteCount.toLocaleString('en-IN')} (81.3%)
+* **Direct Gateway Revenue Collected:** ₹${gatewayRevenue.toLocaleString('en-IN')} (${verifiedReceiptsCount} Verified Receipts)
+* **Recoverable Calling Pipeline:** ₹${pipelineValue.toLocaleString('en-IN')} (${incompleteCount.toLocaleString('en-IN')} Leads @ ₹199)
+* **Completed Registrations:** ${completedCount.toLocaleString('en-IN')} (${completedPct}%)
+* **Fee Not Paid / Drop-offs:** ${incompleteCount.toLocaleString('en-IN')} (${incompletePct}%)
 * **Event Scale:** 62 Competitions across 13 Technical Domains
 
 ---
@@ -161,7 +164,7 @@ export default function AntiGravityReportModal({
                 ₹{gatewayRevenue.toLocaleString('en-IN')}
               </span>
               <span className="text-[10px] text-zinc-500 block mt-0.5">
-                4 Verified Receipts
+                {verifiedReceiptsCount} Verified Receipts
               </span>
             </div>
 
@@ -173,7 +176,7 @@ export default function AntiGravityReportModal({
                 ₹{pipelineValue.toLocaleString('en-IN')}
               </span>
               <span className="text-[10px] text-amber-700 block mt-0.5">
-                2,988 Unpaid Leads
+                {incompleteCount.toLocaleString('en-IN')} Unpaid Leads
               </span>
             </div>
 
@@ -185,7 +188,7 @@ export default function AntiGravityReportModal({
                 {completedCount.toLocaleString('en-IN')}
               </span>
               <span className="text-[10px] text-emerald-700 block mt-0.5">
-                18.7% Conversion
+                {completedPct}% Conversion
               </span>
             </div>
 

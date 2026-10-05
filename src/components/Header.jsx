@@ -102,7 +102,7 @@ export default function Header({
               href="#candidates-table" 
               className="px-2.5 py-1 rounded-md hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
             >
-              Attendees (3,673)
+              Attendees ({Number(summary?.total_unstop_registrations || summary?.totalCount || 3860).toLocaleString('en-IN')})
             </a>
             <button
               onClick={onOpenVerificationQueue}

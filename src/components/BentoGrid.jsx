@@ -42,7 +42,11 @@ export default function BentoGrid({
   }, [participants]);
 
   // Real completed
-  const completedCount = totalCount - incompleteCount;
+  const completedCount = Math.max(0, totalCount - incompleteCount);
+  const completedPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const incompletePct = totalCount > 0 ? Math.round((incompleteCount / totalCount) * 100) : 0;
+  const completedPrecise = totalCount > 0 ? ((completedCount / totalCount) * 100).toFixed(1) : '0.0';
+  const incompletePrecise = totalCount > 0 ? ((incompleteCount / totalCount) * 100).toFixed(1) : '0.0';
 
   // Real Gateway Revenue collected so far (from Unstop paid receipts)
   const gatewayRevenue = useMemo(() => {
@@ -54,7 +58,7 @@ export default function BentoGrid({
     return participants.filter(p => (Number(p.amount) || 0) > 0).length;
   }, [participants]);
 
-  // Calling recovery pipeline (2,988 unpaid leads @ ₹199 standard fee)
+  // Calling recovery pipeline (unpaid leads @ ₹199 standard fee)
   const standardFee = 199;
   const pipelineValue = incompleteCount * standardFee;
 
@@ -89,14 +93,7 @@ export default function BentoGrid({
     // Pick the most recent 7 active dates for clear visualization
     const recentDates = sortedDates.slice(-7);
     if (recentDates.length === 0) {
-      return [
-        { label: 'Sep 26', count: 180, comp: 35, incomp: 145, height: 45 },
-        { label: 'Sep 27', count: 240, comp: 48, incomp: 192, height: 60 },
-        { label: 'Sep 28', count: 190, comp: 38, incomp: 152, height: 48 },
-        { label: 'Sep 29', count: 310, comp: 62, incomp: 248, height: 78 },
-        { label: 'Sep 30', count: 220, comp: 44, incomp: 176, height: 55 },
-        { label: 'Oct 01', count: 3548, comp: 660, incomp: 2888, height: 100 }
-      ];
+      return [];
     }
 
     const max = Math.max(...recentDates.map(d => datesMap[d] || 1));
@@ -107,15 +104,15 @@ export default function BentoGrid({
       const count = datesMap[d] || 0;
       const comp = compMap[d] || 0;
       const incomp = incompMap[d] || 0;
-      // Power scale (exponent 0.42) so low-volume days remain visible alongside the 3,548 spike
+      // Power scale (exponent 0.42) so low-volume days remain visible alongside any spikes
       const height = Math.max(14, Math.round(Math.pow(count / max, 0.42) * 100));
       return { label, count, comp, incomp, height };
     });
   }, [participants]);
 
-  // Real or realistic recent operations activities
+  // Real recent operations activities from audit store
   const recentActivities = useMemo(() => {
-    const logs = getAuditLogs().slice(0, 5);
+    const logs = getAuditLogs().slice(0, 8);
     if (logs.length > 0) {
       return logs.map((l, idx) => ({
         id: l.id || idx,
@@ -127,54 +124,7 @@ export default function BentoGrid({
         deviceType: l.deviceType
       }));
     }
-
-    return [
-      {
-        id: 1,
-        title: 'Harsh Vardhan (Central Desk)',
-        subtitle: 'Call Logged: Candidate interested in Robowars, will pay online',
-        time: 'Today, 10:24 AM',
-        icon: PhoneCall,
-        device: 'MacBook / Mac • Chrome',
-        deviceType: 'desktop'
-      },
-      {
-        id: 2,
-        title: 'Priya Sharma (Mechanica Bay)',
-        subtitle: 'Payment Claimed: Candidate claimed UPI payment, queued for verify',
-        time: 'Today, 09:45 AM',
-        icon: ShieldCheck,
-        device: 'Apple iPhone • Safari',
-        deviceType: 'mobile'
-      },
-      {
-        id: 3,
-        title: 'Aman Deep (Plexus Bay)',
-        subtitle: 'Callback scheduled: Asked to call back at 6:00 PM',
-        time: 'Yesterday',
-        icon: Clock,
-        device: 'Samsung Galaxy S24 • Chrome',
-        deviceType: 'mobile'
-      },
-      {
-        id: 4,
-        title: 'Unstop Sync Engine',
-        subtitle: 'Synced 3,673 total records from Unstop Portal',
-        time: 'Oct 01',
-        icon: Zap,
-        device: 'Server Daemon',
-        deviceType: 'desktop'
-      },
-      {
-        id: 5,
-        title: 'Rohit Kumar (Electrolution)',
-        subtitle: 'Call Logged: Candidate requested event rules on WhatsApp',
-        time: 'Oct 01',
-        icon: CheckCircle2,
-        device: 'Windows 11 PC • Edge',
-        deviceType: 'desktop'
-      }
-    ];
+    return [];
   }, []);
 
   const handleSaveQuota = (e) => {
@@ -200,11 +150,11 @@ export default function BentoGrid({
                   Registration Flow
                 </h3>
                 <span className="text-[10px] font-mono text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-full font-semibold">
-                  3,673 Total
+                  {totalCount.toLocaleString('en-IN')} Total
                 </span>
               </div>
               <span className="text-[11px] font-mono text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full font-medium">
-                19% Done
+                {completedPct}% Done
               </span>
             </div>
             <p className="text-xs text-zinc-500 mb-4">
@@ -212,54 +162,60 @@ export default function BentoGrid({
             </p>
 
             {/* Minimalist Neutral Bar Chart with Tooltips */}
-            <div className="h-32 flex items-end justify-between gap-1 sm:gap-2.5 px-1 sm:px-2 pt-2 pb-1 mb-4 border-b border-zinc-100">
-              {chartBars.map((bar, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group relative">
-                  {/* Hover Floating Pill */}
-                  <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-900 text-white text-[9.5px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10 font-mono shadow-sm">
-                    {bar.count.toLocaleString('en-IN')} leads
+            {chartBars.length === 0 ? (
+              <div className="h-32 flex items-center justify-center border-b border-zinc-100 mb-4 text-xs text-zinc-400">
+                No registration timeline available
+              </div>
+            ) : (
+              <div className="h-32 flex items-end justify-between gap-1 sm:gap-2.5 px-1 sm:px-2 pt-2 pb-1 mb-4 border-b border-zinc-100">
+                {chartBars.map((bar, idx) => (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end group relative">
+                    {/* Hover Floating Pill */}
+                    <div className="absolute -top-7 opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-900 text-white text-[9.5px] px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap z-10 font-mono shadow-sm">
+                      {bar.count.toLocaleString('en-IN')} leads
+                    </div>
+                    
+                    <div className="w-full relative flex items-end justify-center h-full">
+                      <div 
+                        style={{ height: `${bar.height}%` }}
+                        className={`w-full max-w-[28px] rounded-t-md transition-all duration-300 ${
+                          idx === chartBars.length - 1 
+                            ? 'bg-zinc-900 shadow-xs' 
+                            : 'bg-zinc-500 hover:bg-zinc-700'
+                        }`}
+                        title={`${bar.label}: ${bar.count.toLocaleString('en-IN')} total (${bar.comp} completed, ${bar.incomp} unpaid)`}
+                      />
+                    </div>
+                    <span className="text-[10px] font-medium text-zinc-500 group-hover:text-zinc-900 truncate">
+                      {bar.label}
+                    </span>
                   </div>
-                  
-                  <div className="w-full relative flex items-end justify-center h-full">
-                    <div 
-                      style={{ height: `${bar.height}%` }}
-                      className={`w-full max-w-[28px] rounded-t-md transition-all duration-300 ${
-                        idx === chartBars.length - 1 
-                          ? 'bg-zinc-900 shadow-xs' 
-                          : 'bg-zinc-500 hover:bg-zinc-700'
-                      }`}
-                      title={`${bar.label}: ${bar.count.toLocaleString('en-IN')} total (${bar.comp} completed, ${bar.incomp} unpaid)`}
-                    />
-                  </div>
-                  <span className="text-[10px] font-medium text-zinc-500 group-hover:text-zinc-900 truncate">
-                    {bar.label}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
-            {/* Split Progress Indicator: Completed (19%) vs Fee Not Paid (81%) */}
+            {/* Split Progress Indicator: Completed vs Fee Not Paid */}
             <div className="mb-4">
               <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden flex">
                 <div 
-                  style={{ width: `${Math.round((completedCount / totalCount) * 100)}%` }}
+                  style={{ width: `${Math.round((completedCount / (totalCount || 1)) * 100)}%` }}
                   className="bg-zinc-900 h-full transition-all duration-500"
-                  title={`Completed: ${completedCount} (${Math.round((completedCount / totalCount) * 100)}%)`}
+                  title={`Completed: ${completedCount} (${completedPct}%)`}
                 />
                 <div 
-                  style={{ width: `${Math.round((incompleteCount / totalCount) * 100)}%` }}
+                  style={{ width: `${Math.round((incompleteCount / (totalCount || 1)) * 100)}%` }}
                   className="bg-amber-400 h-full transition-all duration-500"
-                  title={`Fee Not Paid: ${incompleteCount} (${Math.round((incompleteCount / totalCount) * 100)}%)`}
+                  title={`Fee Not Paid: ${incompleteCount} (${incompletePct}%)`}
                 />
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-zinc-500 mt-1.5 font-mono gap-1">
                 <span className="flex items-center gap-1 font-medium text-zinc-800">
                   <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 inline-block" />
-                  Completed: {completedCount} (19%)
+                  Completed: {completedCount.toLocaleString('en-IN')} ({completedPct}%)
                 </span>
                 <span className="flex items-center gap-1 font-medium text-amber-700">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-                  Fee Not Paid: {incompleteCount} (81%)
+                  Fee Not Paid: {incompleteCount.toLocaleString('en-IN')} ({incompletePct}%)
                 </span>
               </div>
             </div>
@@ -269,7 +225,7 @@ export default function BentoGrid({
               <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-1 flex items-center justify-between">
                   <span>COMPLETED</span>
-                  <span className="text-[9px] font-mono text-zinc-400 font-normal">18.7%</span>
+                  <span className="text-[9px] font-mono text-zinc-400 font-normal">{completedPrecise}%</span>
                 </div>
                 <div className="text-xl font-bold text-zinc-900">
                   {completedCount.toLocaleString('en-IN')}
@@ -282,7 +238,7 @@ export default function BentoGrid({
               <div className="bg-amber-50/60 rounded-xl p-3 border border-amber-100">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-1 flex items-center justify-between">
                   <span>FEE NOT PAID</span>
-                  <span className="text-[9px] font-mono text-amber-600 font-normal">81.3%</span>
+                  <span className="text-[9px] font-mono text-amber-600 font-normal">{incompletePrecise}%</span>
                 </div>
                 <div className="text-xl font-bold text-amber-950">
                   {incompleteCount.toLocaleString('en-IN')}
@@ -348,7 +304,7 @@ export default function BentoGrid({
                 </span>
               </div>
               <p className="text-[11px] text-zinc-500 mb-2">
-                2,988 unpaid leads × ₹199 standard event entry fee
+                {incompleteCount.toLocaleString('en-IN')} unpaid leads × ₹199 standard event entry fee
               </p>
               
               {/* Recovery Progress Bar */}
@@ -361,7 +317,7 @@ export default function BentoGrid({
 
               <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
                 <span>{calledCount} Calls Logged</span>
-                <span>Target: ₹89,190 (15% Recovery)</span>
+                <span>Target: ₹{Math.round(incompleteCount * 199 * 0.15).toLocaleString('en-IN')} (15% Recovery)</span>
               </div>
             </div>
 
@@ -425,13 +381,13 @@ export default function BentoGrid({
                 {/* Thick Solid Black Progress Bar */}
                 <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden mb-1">
                   <div 
-                    style={{ width: `${Math.min(100, Math.round((completedCount / totalCount) * 100))}%` }}
+                    style={{ width: `${Math.min(100, Math.round((completedCount / (totalCount || 1)) * 100))}%` }}
                     className="bg-zinc-900 h-full rounded-full transition-all duration-500"
                   />
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                  <span>18.7% completed on portal</span>
+                  <span>{completedPrecise}% completed on portal</span>
                   <span className="font-medium text-zinc-700">{completedCount} / {totalCount}</span>
                 </div>
               </div>
@@ -450,13 +406,13 @@ export default function BentoGrid({
                 {/* Progress Bar */}
                 <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden mb-1">
                   <div 
-                    style={{ width: `${Math.min(100, Math.round((incompleteCount / totalCount) * 100))}%` }}
+                    style={{ width: `${Math.min(100, Math.round((incompleteCount / (totalCount || 1)) * 100))}%` }}
                     className="bg-amber-400 h-full rounded-full transition-all duration-500"
                   />
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                  <span>81.3% drop-off at gateway</span>
+                  <span>{incompletePrecise}% drop-off at gateway</span>
                   <span className="font-medium text-zinc-700">{incompleteCount} / {totalCount}</span>
                 </div>
               </div>
@@ -488,7 +444,7 @@ export default function BentoGrid({
 
           <div className="pt-3 border-t border-zinc-100 text-xs text-zinc-400 flex items-center justify-between">
             <span>Average Ticket: ₹199 - ₹200</span>
-            <span className="font-mono text-zinc-500">Total Leads: 3,673</span>
+            <span className="font-mono text-zinc-500">Total Leads: {totalCount.toLocaleString('en-IN')}</span>
           </div>
         </div>
 
@@ -510,57 +466,65 @@ export default function BentoGrid({
 
           <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-mono font-semibold bg-zinc-900 text-white">
-              01 02
+              {recentActivities.length} logs
             </span>
           </div>
         </div>
 
-        {/* List Rows */}
-        <div className="divide-y divide-zinc-100 mt-3">
-          {recentActivities.map((act) => {
-            const IconComp = act.icon;
-            return (
-              <div 
-                key={act.id} 
-                className="py-3 flex items-center justify-between gap-3 group hover:bg-zinc-50/60 -mx-2 px-2 rounded-xl transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-700 shrink-0 group-hover:bg-zinc-200 transition-colors">
-                    <IconComp className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-xs text-zinc-900 flex items-center justify-between gap-2">
-                      <span className="truncate">{act.title}</span>
-                      <span className="text-[10.5px] font-medium text-zinc-400 shrink-0">
-                        {act.time}
-                      </span>
+        {/* List Rows or Clean Empty State */}
+        {recentActivities.length === 0 ? (
+          <div className="py-8 text-center text-zinc-400">
+            <PhoneCall className="w-8 h-8 mx-auto mb-2 text-zinc-300 stroke-[1.5]" />
+            <p className="text-xs font-medium text-zinc-600">No calling activity logged yet</p>
+            <p className="text-[11px] text-zinc-400 mt-0.5">Calls and verification updates logged by coordinators will appear here in real-time.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-zinc-100 mt-3">
+            {recentActivities.map((act) => {
+              const IconComp = act.icon;
+              return (
+                <div 
+                  key={act.id} 
+                  className="py-3 flex items-center justify-between gap-3 group hover:bg-zinc-50/60 -mx-2 px-2 rounded-xl transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-700 shrink-0 group-hover:bg-zinc-200 transition-colors">
+                      <IconComp className="w-4 h-4" />
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mt-0.5">
-                      <div className="text-[11px] text-zinc-500 truncate">
-                        {act.subtitle}
-                      </div>
-                      {act.device && (
-                        <span 
-                          className="inline-flex items-center gap-1 text-[9.5px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200/60 shrink-0 self-start sm:self-auto"
-                          title={`Logged via: ${act.device}`}
-                        >
-                          {act.deviceType === 'mobile' ? (
-                            <Smartphone className="w-2.5 h-2.5 text-zinc-400" />
-                          ) : act.deviceType === 'tablet' ? (
-                            <Tablet className="w-2.5 h-2.5 text-zinc-400" />
-                          ) : (
-                            <Laptop className="w-2.5 h-2.5 text-zinc-400" />
-                          )}
-                          <span className="truncate max-w-[120px]">{act.device}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-xs text-zinc-900 flex items-center justify-between gap-2">
+                        <span className="truncate">{act.title}</span>
+                        <span className="text-[10.5px] font-medium text-zinc-400 shrink-0">
+                          {act.time}
                         </span>
-                      )}
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mt-0.5">
+                        <div className="text-[11px] text-zinc-500 truncate">
+                          {act.subtitle}
+                        </div>
+                        {act.device && (
+                          <span 
+                            className="inline-flex items-center gap-1 text-[9.5px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200/60 shrink-0 self-start sm:self-auto"
+                            title={`Logged via: ${act.device}`}
+                          >
+                            {act.deviceType === 'mobile' ? (
+                              <Smartphone className="w-2.5 h-2.5 text-zinc-400" />
+                            ) : act.deviceType === 'tablet' ? (
+                              <Tablet className="w-2.5 h-2.5 text-zinc-400" />
+                            ) : (
+                              <Laptop className="w-2.5 h-2.5 text-zinc-400" />
+                            )}
+                            <span className="truncate max-w-[120px]">{act.device}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>

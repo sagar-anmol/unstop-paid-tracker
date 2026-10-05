@@ -220,68 +220,76 @@ export default function DeviceActivityModal({ isOpen, onClose, currentUser }) {
             </div>
 
             <div className="bg-white rounded-2xl border border-zinc-200/90 divide-y divide-zinc-100 overflow-hidden shadow-xs">
-              {sessions.map((sess) => {
-                const isMobile = sess.deviceType === 'mobile';
-                const isTablet = sess.deviceType === 'tablet';
-                const dateStr = sess.loginTime ? new Date(sess.loginTime).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  month: 'short',
-                  day: 'numeric'
-                }) : 'Recently';
+              {sessions.length === 0 ? (
+                <div className="p-6 text-center text-zinc-400">
+                  <Laptop className="w-6 h-6 mx-auto mb-1.5 text-zinc-300 stroke-[1.5]" />
+                  <p className="text-xs font-medium text-zinc-600">No other devices logged in</p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">When team members log in, their authenticated devices will appear here in real-time.</p>
+                </div>
+              ) : (
+                sessions.map((sess) => {
+                  const isMobile = sess.deviceType === 'mobile';
+                  const isTablet = sess.deviceType === 'tablet';
+                  const dateStr = sess.loginTime ? new Date(sess.loginTime).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    month: 'short',
+                    day: 'numeric'
+                  }) : 'Recently';
 
-                return (
-                  <div key={sess.id} className="p-3 sm:p-3.5 flex items-start justify-between gap-2.5 sm:gap-3 hover:bg-zinc-50/70 transition-colors">
-                    <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-100 text-zinc-700 flex items-center justify-center shrink-0 mt-0.5">
-                        {isMobile ? (
-                          <Smartphone className="w-4 h-4" />
-                        ) : isTablet ? (
-                          <Tablet className="w-4 h-4" />
-                        ) : (
-                          <Laptop className="w-4 h-4" />
-                        )}
+                  return (
+                    <div key={sess.id} className="p-3 sm:p-3.5 flex items-start justify-between gap-2.5 sm:gap-3 hover:bg-zinc-50/70 transition-colors">
+                      <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-zinc-100 text-zinc-700 flex items-center justify-center shrink-0 mt-0.5">
+                          {isMobile ? (
+                            <Smartphone className="w-4 h-4" />
+                          ) : isTablet ? (
+                            <Tablet className="w-4 h-4" />
+                          ) : (
+                            <Laptop className="w-4 h-4" />
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-xs text-zinc-900">
+                              {sess.deviceModel}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-mono">
+                              • {sess.browser}
+                            </span>
+                            <span className="px-1.5 py-0.2 rounded text-[9.5px] font-mono bg-zinc-100 text-zinc-700 border border-zinc-200 shrink-0">
+                              {sess.teamName}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-[11px] text-zinc-600 mt-0.5 flex-wrap">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                              <span>{sess.location}</span>
+                            </span>
+                            <span className="text-zinc-300">•</span>
+                            <span className="text-zinc-400 font-mono text-[10px]">{sess.ip}</span>
+                          </div>
+
+                          <div className="text-[10px] text-zinc-400 font-mono mt-0.5 flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5 text-zinc-400 shrink-0" />
+                            <span className="truncate">Signed in {dateStr} ({sess.userName})</span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-semibold text-xs text-zinc-900">
-                            {sess.deviceModel}
-                          </span>
-                          <span className="text-[10px] text-zinc-400 font-mono">
-                            • {sess.browser}
-                          </span>
-                          <span className="px-1.5 py-0.2 rounded text-[9.5px] font-mono bg-zinc-100 text-zinc-700 border border-zinc-200 shrink-0">
-                            {sess.teamName}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 text-[11px] text-zinc-600 mt-0.5 flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
-                            <span>{sess.location}</span>
-                          </span>
-                          <span className="text-zinc-300">•</span>
-                          <span className="text-zinc-400 font-mono text-[10px]">{sess.ip}</span>
-                        </div>
-
-                        <div className="text-[10px] text-zinc-400 font-mono mt-0.5 flex items-center gap-1">
-                          <Clock className="w-2.5 h-2.5 text-zinc-400 shrink-0" />
-                          <span className="truncate">Signed in {dateStr} ({sess.userName})</span>
-                        </div>
-                      </div>
+                      <button
+                        onClick={() => handleTerminateSession(sess.id, sess.deviceModel)}
+                        className="px-2 py-1 text-[10px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors shrink-0"
+                        title="Log out of this device session"
+                      >
+                        Log Out
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => handleTerminateSession(sess.id, sess.deviceModel)}
-                      className="px-2 py-1 text-[10px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg border border-rose-200 transition-colors shrink-0"
-                      title="Log out of this device session"
-                    >
-                      Log Out
-                    </button>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
 
