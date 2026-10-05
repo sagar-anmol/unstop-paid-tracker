@@ -18,7 +18,9 @@ import {
   Smartphone,
   Laptop,
   Tablet,
-  Edit3
+  Edit3,
+  Trophy,
+  Layers
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
 import { getAvatarStyle, getInitials } from '../utils/avatar';
 import { getParticipantCallRecord, CALL_STATUSES } from '../utils/callStore';
+import { getDomainForEvent } from '../utils/auth';
 
 export default function CandidateDrawer({ 
   participant, 
@@ -120,16 +123,25 @@ export default function CandidateDrawer({
                 {initials}
               </span>
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-semibold text-slate-900 text-sm truncate max-w-[200px]">
                     {participant.name || 'Participant'}
                   </h3>
-                  <Badge variant="info" className="text-[10px] font-mono">
-                    {participant.event_type || 'Event'}
-                  </Badge>
+                  {participant.events && participant.events.length > 1 ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <Layers className="w-3 h-3 text-indigo-600" />
+                      <span>{participant.events.length} Events</span>
+                    </span>
+                  ) : (
+                    <Badge variant="info" className="text-[10px] font-mono">
+                      {participant.event_type || 'Event'}
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-[11px] font-mono text-slate-500 truncate mt-0.5">
-                  ID: {participant.id} • Ref: {participant.payment_id || '--'}
+                  {participant.events && participant.events.length > 1 
+                    ? `Unified Candidate Profile • ${participant.events.length} Competitions` 
+                    : `ID: ${participant.id} • Ref: ${participant.payment_id || '--'}`}
                 </p>
               </div>
             </div>
@@ -325,6 +337,66 @@ export default function CandidateDrawer({
                 <span className="text-[10px] font-mono text-purple-600">
                   {participant._overrideMeta?.updatedAt ? new Date(participant._overrideMeta.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
+              </div>
+            )}
+
+            {/* Registered Competitions Card (if multi-event candidate) */}
+            {participant.events && participant.events.length > 1 && (
+              <div className="bg-white rounded-xl p-4 border border-indigo-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-indigo-600" />
+                    <span className="font-semibold text-xs text-slate-900">
+                      All Registered Competitions ({participant.events.length})
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+                    Multi-Event Candidate
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+                  {participant.events.map((ev, i) => {
+                    const dom = getDomainForEvent(ev.event_name);
+                    const isEvPaid = ev.is_paid === true || ev.payment_status === 'PAID' || Number(ev.amount) > 0;
+                    return (
+                      <div key={ev.id || i} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-xs flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-slate-900 truncate">
+                            {ev.event_name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5 flex-wrap">
+                            {dom && (
+                              <span 
+                                className="px-1.5 py-0.2 rounded text-[9px] font-mono font-medium border"
+                                style={{
+                                  borderColor: `${dom.accentColor}40`,
+                                  color: dom.accentColor,
+                                  backgroundColor: `${dom.accentColor}12`
+                                }}
+                              >
+                                {dom.name}
+                              </span>
+                            )}
+                            {ev.team_name && <span className="truncate">Team: {ev.team_name}</span>}
+                          </div>
+                        </div>
+
+                        <div>
+                          {isEvPaid ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                              Paid {Number(ev.amount) > 0 ? `₹${ev.amount}` : ''}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                              Fee Pending
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

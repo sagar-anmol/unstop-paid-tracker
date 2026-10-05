@@ -101,9 +101,33 @@ export function saveCallRecords(records) {
   }
 }
 
-export function getParticipantCallRecord(participantId, defaultId = null) {
+export function getParticipantCallRecord(participantIdOrObj, defaultId = null) {
+  if (!participantIdOrObj) return null;
   const records = getCallRecords();
-  return records[participantId] || (defaultId && defaultId !== 'p_demo_seed_1' ? records[defaultId] : null);
+
+  // If passed an object (candidate with multiple registrations or phone)
+  if (typeof participantIdOrObj === 'object') {
+    const p = participantIdOrObj;
+    if (p.id && records[String(p.id)]) return records[String(p.id)];
+    if (p.uniqueKey && records[p.uniqueKey]) return records[p.uniqueKey];
+    if (Array.isArray(p.allIds)) {
+      for (const id of p.allIds) {
+        if (records[String(id)]) return records[String(id)];
+      }
+    }
+    const cleanPhone = (p.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    if (cleanPhone && cleanPhone.length === 10) {
+      const match = Object.values(records).find(r => {
+        const rPhone = (r.leadNumber || '').replace(/[^0-9]/g, '').slice(-10);
+        return rPhone === cleanPhone;
+      });
+      if (match) return match;
+    }
+    return defaultId && defaultId !== 'p_demo_seed_1' ? records[defaultId] : null;
+  }
+
+  const pId = String(participantIdOrObj);
+  return records[pId] || (defaultId && defaultId !== 'p_demo_seed_1' ? records[defaultId] : null);
 }
 
 export function getAuditLogs() {
@@ -310,6 +334,17 @@ export function logCallForParticipant({
   };
 
   records[pId] = updatedRecord;
+
+  // Mirror across all event registration IDs and uniqueKey if participant has multi-event registrations
+  if (Array.isArray(participant.allIds)) {
+    participant.allIds.forEach(id => {
+      records[String(id)] = updatedRecord;
+    });
+  }
+  if (participant.uniqueKey) {
+    records[participant.uniqueKey] = updatedRecord;
+  }
+
   saveCallRecords(records);
 
   // Add immutable Audit Log entry
