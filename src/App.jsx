@@ -232,10 +232,12 @@ export default function App() {
   // Displayed participants (applying event filter if set)
   const displayedParticipants = useMemo(() => {
     if (!selectedEventFilter) return scopedParticipants;
+    const query = selectedEventFilter.toLowerCase().trim();
+    const exactMatches = scopedParticipants.filter(p => (p.event_name || '').toLowerCase().trim() === query);
+    if (exactMatches.length > 0) return exactMatches;
     return scopedParticipants.filter(p => {
-      const target = (p.event_name || '').toLowerCase();
-      const query = selectedEventFilter.toLowerCase();
-      return target === query || target.includes(query) || query.includes(target);
+      const target = (p.event_name || '').toLowerCase().trim();
+      return target.includes(query) || query.includes(target);
     });
   }, [scopedParticipants, selectedEventFilter]);
 

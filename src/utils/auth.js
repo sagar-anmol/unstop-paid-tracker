@@ -18,21 +18,21 @@ export const DOMAINS_DIRECTORY = {
     accentColor: '#38BDF8',
     events: [
       'RoboSoccer',
-      'RC Car Race',
+      'RC Car',
       'Sky Maneuver',
-      'Robowars',
-      'Hover-Mania',
-      'Remote Control Surface Boat Race',
+      'Robowar',
+      'Hovermania',
+      'RC Boat',
       'Rapid Line',
       'Micromouse Challenge'
     ],
     aliases: [
-      'Robo Soccer',
-      'Robowar',
-      'Hovermania',
-      'RC Boat',
-      'RC Car',
-      'Rapid Line (LFR)'
+      'RC Car Race',
+      'Robowars',
+      'Hover-Mania',
+      'Remote Control Surface Boat Race',
+      'Rapid Line (LFR)',
+      'Robo Soccer'
     ]
   },
   plexus: {
@@ -53,10 +53,6 @@ export const DOMAINS_DIRECTORY = {
     ],
     aliases: [
       'Debug & Deploy',
-      'Logic Flow',
-      'Competitive Programming Marathon',
-      'Machine Learning Model',
-      'AI Chit-Chat',
       'Aqua-Epoch'
     ]
   },
@@ -69,12 +65,12 @@ export const DOMAINS_DIRECTORY = {
     tagline: 'Circular Prototyping, 36h Hackathon & Sustainable Jugaad',
     accentColor: '#C084FC',
     events: [
-      'Kritrim- Model Exhibition',
+      'Kritrim - Model Exhibition',
       'Hackathon',
       'Jugaad'
     ],
     aliases: [
-      'Kritrim - Model Exhibition',
+      'Kritrim- Model Exhibition',
       'Kritrim'
     ]
   },
@@ -102,14 +98,14 @@ export const DOMAINS_DIRECTORY = {
     tagline: 'Venture Pitches, Case Cracks, Brand Marketing & ESG Strategy',
     accentColor: '#FBBF24',
     events: [
-      'Pitchverse',
+      'Pitchverse - Virtual Strategy',
       'Case Crack',
       'Brand Blitz',
-      'Ethical Crosstalk'
+      'Case Ethical Crosstalk'
     ],
     aliases: [
-      'Pitchverse - Virtual Strategy',
-      'Case Ethical Crosstalk'
+      'Pitchverse',
+      'Ethical Crosstalk'
     ]
   },
   electronica: {
@@ -175,12 +171,12 @@ export const DOMAINS_DIRECTORY = {
       'Soap Making',
       'Jam Session',
       'Chemi-Mystery',
-      'Chemi-Craft',
-      'Paper and Poster Presentation'
-    ],
-    aliases: [
       'Chemi Craft',
       'Poster and Paper Presentation'
+    ],
+    aliases: [
+      'Chemi-Craft',
+      'Paper and Poster Presentation'
     ]
   },
   civicon: {
@@ -213,12 +209,12 @@ export const DOMAINS_DIRECTORY = {
     tagline: 'Cross-Disciplinary Earth Solutions, Smart Agriculture & Techno-Vation',
     accentColor: '#4ADE80',
     events: [
-      'Ideathon',
+      'Smart Agriculture (SM-Agri)',
       'Techno-Vation',
       'Cognitive Challenges'
     ],
     aliases: [
-      'Smart Agriculture (SM-Agri)',
+      'Ideathon',
       'SM-Agri',
       'Smart Agriculture'
     ]
@@ -934,25 +930,50 @@ export function getParticipantsForUser(user, participants = [], domainOverride =
 }
 
 /**
- * Computes domain-specific statistical metrics
+ * Computes domain-specific statistical metrics.
+ * Guarantees that totalParticipants is the exact mathematical sum of its constituent event counts.
  */
 export function getDomainStats(domainId, participants = []) {
   const domain = DOMAINS_DIRECTORY[domainId];
   if (!domain) return null;
 
+  // Track exact count for each canonical official event
+  const eventCounts = {};
+  domain.events.forEach(ev => {
+    eventCounts[ev] = 0;
+  });
+
   const domainParticipants = participants.filter(p => isEventInDomain(domainId, p.event_name));
+
+  domainParticipants.forEach(p => {
+    const pName = (p.event_name || '').toLowerCase().trim();
+    let matchedCanonical = domain.events.find(ev => ev.toLowerCase().trim() === pName);
+    if (!matchedCanonical && domain.aliases) {
+      matchedCanonical = domain.events.find(ev => {
+        const evLow = ev.toLowerCase().trim();
+        return pName.includes(evLow) || evLow.includes(pName);
+      });
+    }
+    const key = matchedCanonical || domain.events[0];
+    if (key) {
+      eventCounts[key] = (eventCounts[key] || 0) + 1;
+    }
+  });
+
+  const totalParticipants = domainParticipants.length;
   const paidCount = domainParticipants.filter(p => Number(p.amount) > 0).length;
   const totalRevenue = domainParticipants.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const colleges = new Set(domainParticipants.map(p => p.college).filter(Boolean));
 
   return {
     domain,
-    totalParticipants: domainParticipants.length,
+    totalParticipants,
     paidCount,
-    freeCount: domainParticipants.length - paidCount,
+    freeCount: totalParticipants - paidCount,
     totalRevenue,
     uniqueColleges: colleges.size,
     eventsCount: domain.events.length,
-    eventsList: domain.events
+    eventsList: domain.events,
+    eventCounts
   };
 }

@@ -69,9 +69,15 @@ export default function DomainBanner({
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
             <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold">Domain Attendees</div>
-              <div className="text-xl font-bold text-slate-900 mt-0.5">{stats.totalParticipants}</div>
-              <div className="text-[10px] font-mono text-slate-500 mt-0.5">Across {stats.uniqueColleges} colleges</div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold">
+                {selectedEvent ? 'Event Attendees' : 'Domain Attendees'}
+              </div>
+              <div className="text-xl font-bold text-slate-900 mt-0.5">
+                {selectedEvent ? (stats.eventCounts?.[selectedEvent] ?? 0) : stats.totalParticipants}
+              </div>
+              <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                {selectedEvent ? `Part of ${stats.totalParticipants} domain total` : `Across ${stats.uniqueColleges} colleges`}
+              </div>
             </div>
 
             <div className="p-3 rounded-lg bg-emerald-50/60 border border-emerald-200/80">
@@ -107,7 +113,7 @@ export default function DomainBanner({
                 onClick={() => onSelectEventFilter && onSelectEventFilter('')}
                 className="text-[10px] font-mono text-sky-600 hover:text-sky-800 cursor-pointer font-medium"
               >
-                Clear Event Filter
+                Clear Event Filter ({selectedEvent})
               </button>
             )}
           </div>
@@ -115,17 +121,23 @@ export default function DomainBanner({
           <div className="flex items-center gap-1.5 flex-wrap">
             {domain.events.map((ev, i) => {
               const isSelected = selectedEvent === ev;
+              const evCount = stats?.eventCounts?.[ev] ?? 0;
               return (
                 <button
                   key={i}
                   onClick={() => onSelectEventFilter && onSelectEventFilter(isSelected ? '' : ev)}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                     isSelected
                       ? 'bg-slate-900 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/80'
                   }`}
                 >
                   <span>{ev}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-semibold ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {evCount}
+                  </span>
                 </button>
               );
             })}
