@@ -1,10 +1,10 @@
 {
-  "last_synced_at": "2026-10-06T16:26:16.560933+00:00",
-  "token_expires_at": "2026-10-07T16:26:17.310328+00:00",
+  "last_synced_at": "2026-10-06T22:08:27.302333+00:00",
+  "token_expires_at": "2026-10-07T22:08:28.196264+00:00",
   "auth_mode": "automated_login",
-  "total_unstop_registrations": 4637,
-  "total_paid_registrations": 4586,
-  "total_incomplete_registrations": 51,
+  "total_unstop_registrations": 4693,
+  "total_paid_registrations": 4640,
+  "total_incomplete_registrations": 53,
   "total_amount_collected": 2396.0,
   "total_colleges": 270,
   "total_events_scanned": 67,
@@ -54,8 +54,8 @@
       "id": 1744819,
       "title": "The Aqua-Epoch",
       "type": "competitions",
-      "total_registrations": 75,
-      "paid_registrations": 75,
+      "total_registrations": 77,
+      "paid_registrations": 77,
       "incomplete_registrations": 0
     },
     {
@@ -70,24 +70,24 @@
       "id": 1744809,
       "title": "WPTC - Wireless Power Transfer",
       "type": "competitions",
-      "total_registrations": 52,
-      "paid_registrations": 52,
+      "total_registrations": 54,
+      "paid_registrations": 54,
       "incomplete_registrations": 0
     },
     {
       "id": 1744782,
       "title": "Quiz Nova",
       "type": "quizzes",
-      "total_registrations": 173,
-      "paid_registrations": 173,
+      "total_registrations": 177,
+      "paid_registrations": 177,
       "incomplete_registrations": 0
     },
     {
       "id": 1744780,
       "title": "The Big Bull",
       "type": "competitions",
-      "total_registrations": 81,
-      "paid_registrations": 81,
+      "total_registrations": 82,
+      "paid_registrations": 82,
       "incomplete_registrations": 0
     },
     {
@@ -196,7 +196,7 @@
     },
     {
       "id": 1744238,
-      "title": "Pitchverse - Virtual Strategy",
+      "title": "Pitchverse",
       "type": "competitions",
       "total_registrations": 63,
       "paid_registrations": 63,
@@ -220,7 +220,7 @@
     },
     {
       "id": 1744231,
-      "title": "Case Ethical Crosstalk",
+      "title": "Ethical Crosstalk",
       "type": "competitions",
       "total_registrations": 141,
       "paid_registrations": 141,
@@ -246,24 +246,24 @@
       "id": 1744228,
       "title": "Pixel Wizard",
       "type": "competitions",
-      "total_registrations": 72,
-      "paid_registrations": 72,
+      "total_registrations": 76,
+      "paid_registrations": 76,
       "incomplete_registrations": 0
     },
     {
       "id": 1744227,
       "title": "Hackathon",
       "type": "hackathons",
-      "total_registrations": 86,
-      "paid_registrations": 86,
+      "total_registrations": 89,
+      "paid_registrations": 89,
       "incomplete_registrations": 0
     },
     {
       "id": 1744224,
       "title": "The Neural Nexus",
       "type": "competitions",
-      "total_registrations": 99,
-      "paid_registrations": 99,
+      "total_registrations": 101,
+      "paid_registrations": 101,
       "incomplete_registrations": 0
     },
     {
@@ -286,16 +286,16 @@
       "id": 1744220,
       "title": "Debug and Deploy",
       "type": "competitions",
-      "total_registrations": 146,
-      "paid_registrations": 146,
+      "total_registrations": 151,
+      "paid_registrations": 151,
       "incomplete_registrations": 0
     },
     {
       "id": 1744219,
       "title": "Aqua Clean",
       "type": "competitions",
-      "total_registrations": 74,
-      "paid_registrations": 74,
+      "total_registrations": 77,
+      "paid_registrations": 77,
       "incomplete_registrations": 0
     },
     {
@@ -310,16 +310,16 @@
       "id": 1744216,
       "title": "Ghost Code",
       "type": "competitions",
-      "total_registrations": 100,
-      "paid_registrations": 49,
-      "incomplete_registrations": 51
+      "total_registrations": 103,
+      "paid_registrations": 50,
+      "incomplete_registrations": 53
     },
     {
       "id": 1744215,
       "title": "Heuristic Havoc",
       "type": "competitions",
-      "total_registrations": 77,
-      "paid_registrations": 77,
+      "total_registrations": 78,
+      "paid_registrations": 78,
       "incomplete_registrations": 0
     },
     {
@@ -334,8 +334,8 @@
       "id": 1744213,
       "title": "Chemi Craft",
       "type": "competitions",
-      "total_registrations": 53,
-      "paid_registrations": 53,
+      "total_registrations": 55,
+      "paid_registrations": 55,
       "incomplete_registrations": 0
     },
     {
@@ -374,8 +374,8 @@
       "id": 1744205,
       "title": "Jam Session",
       "type": "cultural",
-      "total_registrations": 54,
-      "paid_registrations": 54,
+      "total_registrations": 58,
+      "paid_registrations": 58,
       "incomplete_registrations": 0
     },
     {
@@ -406,24 +406,24 @@
       "id": 1744177,
       "title": "Chemi-Thone",
       "type": "competitions",
-      "total_registrations": 54,
-      "paid_registrations": 54,
+      "total_registrations": 57,
+      "paid_registrations": 57,
       "incomplete_registrations": 0
     },
     {
       "id": 1744174,
       "title": "Soldering Speedrun",
       "type": "competitions",
-      "total_registrations": 65,
-      "paid_registrations": 65,
+      "total_registrations": 66,
+      "paid_registrations": 66,
       "incomplete_registrations": 0
     },
     {
       "id": 1744172,
       "title": "Grid Masters-SLD Challenge",
       "type": "competitions",
-      "total_registrations": 56,
-      "paid_registrations": 56,
+      "total_registrations": 58,
+      "paid_registrations": 58,
       "incomplete_registrations": 0
     },
     {
@@ -446,16 +446,16 @@
       "id": 1744167,
       "title": "Poster and Paper Presentation",
       "type": "competitions",
-      "total_registrations": 61,
-      "paid_registrations": 61,
+      "total_registrations": 63,
+      "paid_registrations": 63,
       "incomplete_registrations": 0
     },
     {
       "id": 1744166,
       "title": "Soap Making",
       "type": "competitions",
-      "total_registrations": 69,
-      "paid_registrations": 69,
+      "total_registrations": 70,
+      "paid_registrations": 70,
       "incomplete_registrations": 0
     },
     {
@@ -470,8 +470,8 @@
       "id": 1744164,
       "title": "Chemi-Mystery",
       "type": "competitions",
-      "total_registrations": 62,
-      "paid_registrations": 62,
+      "total_registrations": 68,
+      "paid_registrations": 68,
       "incomplete_registrations": 0
     },
     {
@@ -486,8 +486,8 @@
       "id": 1744160,
       "title": "Splash Rocket",
       "type": "competitions",
-      "total_registrations": 67,
-      "paid_registrations": 67,
+      "total_registrations": 69,
+      "paid_registrations": 69,
       "incomplete_registrations": 0
     },
     {
@@ -526,16 +526,16 @@
       "id": 1743774,
       "title": "Kritrim - Model Exhibition",
       "type": "competitions",
-      "total_registrations": 58,
-      "paid_registrations": 58,
+      "total_registrations": 59,
+      "paid_registrations": 59,
       "incomplete_registrations": 0
     },
     {
       "id": 1742433,
       "title": "Jugaad",
       "type": "hackathons",
-      "total_registrations": 62,
-      "paid_registrations": 62,
+      "total_registrations": 64,
+      "paid_registrations": 64,
       "incomplete_registrations": 0
     },
     {
