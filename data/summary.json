@@ -1,10 +1,10 @@
 {
-  "last_synced_at": "2026-10-05T18:59:49.658438+00:00",
-  "token_expires_at": "2026-10-06T18:59:50.694280+00:00",
+  "last_synced_at": "2026-10-06T01:04:17.949195+00:00",
+  "token_expires_at": "2026-10-07T01:04:18.840715+00:00",
   "auth_mode": "automated_login",
-  "total_unstop_registrations": 4351,
-  "total_paid_registrations": 1334,
-  "total_incomplete_registrations": 3017,
+  "total_unstop_registrations": 4356,
+  "total_paid_registrations": 1338,
+  "total_incomplete_registrations": 3018,
   "total_amount_collected": 6988.0,
   "total_colleges": 266,
   "total_events_scanned": 67,
@@ -62,8 +62,8 @@
       "id": 1744818,
       "title": "Technical Quiz Competition",
       "type": "competitions",
-      "total_registrations": 73,
-      "paid_registrations": 20,
+      "total_registrations": 74,
+      "paid_registrations": 21,
       "incomplete_registrations": 53
     },
     {
@@ -94,8 +94,8 @@
       "id": 1744779,
       "title": "Tech4Earth",
       "type": "competitions",
-      "total_registrations": 193,
-      "paid_registrations": 117,
+      "total_registrations": 194,
+      "paid_registrations": 118,
       "incomplete_registrations": 76
     },
     {
@@ -166,8 +166,8 @@
       "id": 1744769,
       "title": "CAD Design Challenge",
       "type": "competitions",
-      "total_registrations": 56,
-      "paid_registrations": 6,
+      "total_registrations": 57,
+      "paid_registrations": 7,
       "incomplete_registrations": 50
     },
     {
@@ -190,9 +190,9 @@
       "id": 1744757,
       "title": "Chess",
       "type": "competitions",
-      "total_registrations": 94,
+      "total_registrations": 95,
       "paid_registrations": 41,
-      "incomplete_registrations": 53
+      "incomplete_registrations": 54
     },
     {
       "id": 1744238,
@@ -286,8 +286,8 @@
       "id": 1744220,
       "title": "Debug and Deploy",
       "type": "competitions",
-      "total_registrations": 130,
-      "paid_registrations": 28,
+      "total_registrations": 131,
+      "paid_registrations": 29,
       "incomplete_registrations": 102
     },
     {
