@@ -20,7 +20,8 @@ import {
   Tablet,
   Edit3,
   Trophy,
-  Layers
+  Layers,
+  RotateCcw
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,12 @@ import { Card } from "@/components/ui/card";
 import { getAvatarStyle, getInitials } from '../utils/avatar';
 import { getParticipantCallRecord, CALL_STATUSES } from '../utils/callStore';
 import { getDomainForEvent } from '../utils/auth';
+import { 
+  isParticipantRefunded, 
+  isParticipantPaid, 
+  isParticipantUnpaid, 
+  getPaymentBadgeConfig 
+} from '../utils/paymentUtils';
 
 export default function CandidateDrawer({ 
   participant, 
@@ -70,7 +77,7 @@ export default function CandidateDrawer({
   // Edit state for WebDev and Super Admins
   const canEdit = currentUser?.role === 'super_admin' || currentUser?.role === 'webdev';
   const [isEditing, setIsEditing] = React.useState(false);
-  const [editStatus, setEditStatus] = React.useState(participant.payment_status || (amt > 0 ? 'PAID' : 'INCOMPLETE'));
+  const [editStatus, setEditStatus] = React.useState(participant.payment_status || (isParticipantRefunded(participant) ? 'REFUNDED' : (isParticipantPaid(participant) ? 'PAID' : 'UNPAID')));
   const [editAmount, setEditAmount] = React.useState(participant.amount !== undefined ? String(participant.amount) : '0');
   const [editPaymentId, setEditPaymentId] = React.useState(participant.payment_id || '');
   const [editUtr, setEditUtr] = React.useState(participant.utr_number || '');
@@ -78,7 +85,7 @@ export default function CandidateDrawer({
 
   React.useEffect(() => {
     if (participant) {
-      setEditStatus(participant.payment_status || (Number(participant.amount) > 0 ? 'PAID' : 'INCOMPLETE'));
+      setEditStatus(participant.payment_status || (isParticipantRefunded(participant) ? 'REFUNDED' : (isParticipantPaid(participant) ? 'PAID' : 'UNPAID')));
       setEditAmount(participant.amount !== undefined ? String(participant.amount) : '0');
       setEditPaymentId(participant.payment_id || '');
       setEditUtr(participant.utr_number || '');
@@ -92,7 +99,9 @@ export default function CandidateDrawer({
     if (onUpdateParticipant) {
       onUpdateParticipant(participant.id, {
         payment_status: editStatus,
-        amount: editStatus === 'PAID' ? (Number(editAmount) || 200) : (editStatus === 'FREE' ? 0 : Number(editAmount) || 0),
+        is_paid: editStatus === 'PAID',
+        is_refunded: editStatus === 'REFUNDED',
+        amount: Number(editAmount) || 0,
         payment_id: editPaymentId.trim(),
         utr_number: editUtr.trim(),
         admin_note: editRemark.trim()
@@ -247,9 +256,9 @@ export default function CandidateDrawer({
                       }}
                       className="w-full text-xs bg-white border border-zinc-300 rounded-lg p-2 font-semibold text-zinc-900 focus:border-zinc-900 outline-none"
                     >
-                      <option value="PAID">PAID (Confirmed)</option>
-                      <option value="INCOMPLETE">INCOMPLETE (Fee Pending)</option>
-                      <option value="FREE">FREE (Entry Pass)</option>
+                      <option value="UNPAID">UNPAID (Pending techfest26.in)</option>
+                      <option value="REFUNDED">REFUNDED (Unstop Refunded)</option>
+                      <option value="PAID">PAID (techfest26.in Confirmed)</option>
                     </select>
                   </div>
 
@@ -358,7 +367,8 @@ export default function CandidateDrawer({
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
                   {participant.events.map((ev, i) => {
                     const dom = getDomainForEvent(ev.event_name);
-                    const isEvPaid = ev.is_paid === true || ev.payment_status === 'PAID' || Number(ev.amount) > 0;
+                    const isEvPaid = isParticipantPaid(ev);
+                    const isEvRefunded = isParticipantRefunded(ev);
                     return (
                       <div key={ev.id || i} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-xs flex items-center justify-between gap-2">
                         <div className="min-w-0 flex-1">
@@ -387,9 +397,14 @@ export default function CandidateDrawer({
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                               Paid {Number(ev.amount) > 0 ? `₹${ev.amount}` : ''}
                             </span>
+                          ) : isEvRefunded ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-purple-50 text-purple-700 border border-purple-200 shrink-0 flex items-center gap-1">
+                              <RotateCcw className="w-2.5 h-2.5 text-purple-600" />
+                              Refunded {Number(ev.amount) > 0 ? `₹${ev.amount}` : ''}
+                            </span>
                           ) : (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
-                              Fee Pending
+                              Unpaid
                             </span>
                           )}
                         </div>
@@ -401,7 +416,25 @@ export default function CandidateDrawer({
             )}
 
             {/* Payment & Verification Status Banner */}
-            {amt > 0 || participant.payment_status === 'PAID' ? (
+            {isParticipantRefunded(participant) ? (
+              <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 shadow-xs">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-purple-700 font-semibold mb-0.5 flex items-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5 text-purple-600" />
+                  Refund Processed (Unstop)
+                </div>
+                <div className="flex items-center gap-2 font-semibold text-sm text-purple-900">
+                  <span>Refunded {amt > 0 ? `₹${amt.toLocaleString('en-IN')}` : ''} • techfest26.in Payment Pending</span>
+                </div>
+                <div className="text-[11px] text-purple-700 mt-1">
+                  Unstop payment was refunded. Participant needs to complete their entry fee payment on techfest26.in.
+                </div>
+                {participant.payment_id && (
+                  <div className="text-[10px] font-mono text-purple-600 mt-1.5 select-all">
+                    Original Unstop Txn: {participant.payment_id}
+                  </div>
+                )}
+              </div>
+            ) : isParticipantPaid(participant) ? (
               <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-xs">
                 <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-700 font-semibold mb-0.5">
                   Payment Status
@@ -415,19 +448,6 @@ export default function CandidateDrawer({
                     Txn ID: {participant.payment_id}
                   </div>
                 )}
-              </div>
-            ) : participant.payment_status === 'INCOMPLETE' || (participant.status_label && participant.status_label.toLowerCase().includes('not paid')) ? (
-              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-xs">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-amber-700 font-semibold mb-0.5">
-                  Registration Status
-                </div>
-                <div className="flex items-center gap-2 font-semibold text-sm text-amber-800">
-                  <Clock className="w-4 h-4 text-amber-600" />
-                  <span>Incomplete • Registration Fee Pending</span>
-                </div>
-                <div className="text-[11px] text-amber-700/90 mt-1">
-                  Candidate has not completed payment on Unstop (Outreach Priority)
-                </div>
               </div>
             ) : callRecord?.lastStatus === 'PAYMENT_CLAIMED' ? (
               <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-xs">
@@ -453,15 +473,18 @@ export default function CandidateDrawer({
                 </div>
               </div>
             ) : (
-              <div className="p-3.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-900 shadow-xs">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-sky-700 font-semibold mb-0.5">
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-xs">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-amber-700 font-semibold mb-0.5">
                   Registration Status
                 </div>
-                <div className="flex items-center gap-2 font-semibold text-sm text-sky-800">
-                  <ShieldCheck className="w-4 h-4 text-sky-600" />
-                  <span>Free Competition Entry (Form Verified)</span>
+                <div className="flex items-center gap-2 font-semibold text-sm text-amber-800">
+                  <Clock className="w-4 h-4 text-amber-600" />
+                  <span>Unpaid • Entry Fee Pending (techfest26.in)</span>
                 </div>
-                <div className="text-[11px] font-mono text-sky-700/80 mt-1 select-all">
+                <div className="text-[11px] text-amber-700/90 mt-1">
+                  Registration recorded. Participant needs to complete payment via official portal (techfest26.in).
+                </div>
+                <div className="text-[11px] font-mono text-amber-700/80 mt-1 select-all">
                   Unstop Reg ID: {participant.id}
                 </div>
               </div>

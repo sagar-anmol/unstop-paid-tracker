@@ -178,13 +178,17 @@ def get_headers(token=None, cookies=None):
 def is_registration_paid(record: dict) -> bool:
     """Check if registration is completed / paid."""
     regi_status = str(record.get("regi_status", "")).strip().lower()
+    reg_status_text = str(record.get("registrationStatus", "")).strip().lower()
+
+    # Explicit signals that payment or registration is NOT complete
+    for neg in ("not paid", "incomplete", "not complete", "not filled"):
+        if neg in reg_status_text or neg in regi_status:
+            return False
+
     if regi_status == "complete":
         return True
 
-    reg_status_text = str(record.get("registrationStatus", "")).strip().lower()
-    if "not paid" in reg_status_text:
-        return False
-    if "complete" in reg_status_text or "paid" in reg_status_text:
+    if reg_status_text in ("complete registration", "complete", "paid") or "complete registration" in reg_status_text:
         return True
 
     for amt_field in ("paid_amount", "paidAmount", "amount_paid", "amount"):
@@ -194,9 +198,6 @@ def is_registration_paid(record: dict) -> bool:
                 return True
         except (ValueError, TypeError):
             pass
-
-    if record.get("is_paid") is True or record.get("isPaid") is True:
-        return True
 
     return False
 

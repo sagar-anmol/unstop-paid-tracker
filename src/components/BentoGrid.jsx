@@ -13,10 +13,16 @@ import {
   ArrowUpRight,
   Smartphone,
   Laptop,
-  Tablet
+  Tablet,
+  RotateCcw
 } from 'lucide-react';
 import { DOMAINS_DIRECTORY } from '../utils/auth';
 import { getAuditLogs, getCallRecords } from '../utils/callStore';
+import { 
+  isParticipantRefunded, 
+  isParticipantPaid, 
+  isParticipantUnpaid 
+} from '../utils/paymentUtils';
 
 export default function BentoGrid({ 
   participants = [], 
@@ -29,38 +35,42 @@ export default function BentoGrid({
   const [memoNote, setMemoNote] = useState('');
   const [savedNotice, setSavedNotice] = useState(false);
 
-  // Exact real numbers from Unstop dataset
+  // Exact real numbers from dataset
   const totalCount = participants.length;
   
-  // Real incomplete: "Registraition fee not paid" & payment incomplete
-  const incompleteCount = useMemo(() => {
-    return participants.filter(p => 
-      p.payment_status === 'INCOMPLETE' || 
-      p.payment_status === 'UNPAID' || 
-      (p.status_label && p.status_label.toLowerCase().includes('not paid'))
-    ).length;
+  // Refunded candidates from Unstop
+  const refundedCount = useMemo(() => {
+    return participants.filter(p => isParticipantRefunded(p)).length;
   }, [participants]);
 
-  // Real completed
-  const completedCount = Math.max(0, totalCount - incompleteCount);
-  const completedPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-  const incompletePct = totalCount > 0 ? Math.round((incompleteCount / totalCount) * 100) : 0;
-  const completedPrecise = totalCount > 0 ? ((completedCount / totalCount) * 100).toFixed(1) : '0.0';
-  const incompletePrecise = totalCount > 0 ? ((incompleteCount / totalCount) * 100).toFixed(1) : '0.0';
+  // Unpaid candidates awaiting payment on techfest26.in
+  const unpaidCount = useMemo(() => {
+    return participants.filter(p => isParticipantUnpaid(p)).length;
+  }, [participants]);
 
-  // Real Gateway Revenue collected so far (from Unstop paid receipts)
+  // Paid candidate count (reserved for techfest26.in gateway)
+  const paidCount = useMemo(() => {
+    return participants.filter(p => isParticipantPaid(p)).length;
+  }, [participants]);
+
+  const refundedPct = totalCount > 0 ? Math.round((refundedCount / totalCount) * 100) : 0;
+  const unpaidPct = totalCount > 0 ? Math.round((unpaidCount / totalCount) * 100) : 0;
+  const refundedPrecise = totalCount > 0 ? ((refundedCount / totalCount) * 100).toFixed(1) : '0.0';
+  const unpaidPrecise = totalCount > 0 ? ((unpaidCount / totalCount) * 100).toFixed(1) : '0.0';
+
+  // Refunded revenue from Unstop
+  const refundedRevenue = useMemo(() => {
+    return participants.reduce((acc, p) => isParticipantRefunded(p) ? acc + (Number(p.amount) || 0) : acc, 0);
+  }, [participants]);
+
+  // Active gateway revenue (from techfest26.in)
   const gatewayRevenue = useMemo(() => {
-    return participants.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
-  }, [participants]);
-
-  // Paid candidate count with gateway receipts
-  const paidGatewayCount = useMemo(() => {
-    return participants.filter(p => (Number(p.amount) || 0) > 0).length;
+    return participants.reduce((acc, p) => isParticipantPaid(p) ? acc + (Number(p.amount) || 0) : acc, 0);
   }, [participants]);
 
   // Calling recovery pipeline (unpaid leads @ ₹199 standard fee)
   const standardFee = 199;
-  const pipelineValue = incompleteCount * standardFee;
+  const pipelineValue = unpaidCount * standardFee;
 
   // Real call stats from CRM store
   const callRecords = useMemo(() => getCallRecords(), [participants]);
@@ -68,29 +78,25 @@ export default function BentoGrid({
     return Object.values(callRecords).filter(r => (r.callCount || 0) > 0).length;
   }, [callRecords]);
 
-  // Activity distribution across dates with human-readable power-scaled bar heights
+  // Activity distribution across dates
   const chartBars = useMemo(() => {
     const datesMap = {};
-    const compMap = {};
-    const incompMap = {};
+    const refMap = {};
+    const unpMap = {};
 
     participants.forEach(p => {
       if (p.registered_at) {
         const d = p.registered_at.substring(0, 10);
         datesMap[d] = (datesMap[d] || 0) + 1;
-        const isIncomp = p.payment_status === 'INCOMPLETE' || 
-          p.payment_status === 'UNPAID' || 
-          (p.status_label && p.status_label.toLowerCase().includes('not paid'));
-        if (isIncomp) {
-          incompMap[d] = (incompMap[d] || 0) + 1;
+        if (isParticipantRefunded(p)) {
+          refMap[d] = (refMap[d] || 0) + 1;
         } else {
-          compMap[d] = (compMap[d] || 0) + 1;
+          unpMap[d] = (unpMap[d] || 0) + 1;
         }
       }
     });
 
     const sortedDates = Object.keys(datesMap).sort();
-    // Pick the most recent 7 active dates for clear visualization
     const recentDates = sortedDates.slice(-7);
     if (recentDates.length === 0) {
       return [];
@@ -102,11 +108,10 @@ export default function BentoGrid({
       const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
       const label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const count = datesMap[d] || 0;
-      const comp = compMap[d] || 0;
-      const incomp = incompMap[d] || 0;
-      // Power scale (exponent 0.42) so low-volume days remain visible alongside any spikes
+      const ref = refMap[d] || 0;
+      const unp = unpMap[d] || 0;
       const height = Math.max(14, Math.round(Math.pow(count / max, 0.42) * 100));
-      return { label, count, comp, incomp, height };
+      return { label, count, ref, unp, height };
     });
   }, [participants]);
 
@@ -153,8 +158,9 @@ export default function BentoGrid({
                   {totalCount.toLocaleString('en-IN')} Total
                 </span>
               </div>
-              <span className="text-[11px] font-mono text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full font-medium">
-                {completedPct}% Done
+              <span className="text-[11px] font-mono text-purple-700 bg-purple-50 border border-purple-200/60 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                <RotateCcw className="w-3 h-3 text-purple-600" />
+                {refundedCount} Refunded
               </span>
             </div>
             <p className="text-xs text-zinc-500 mb-4">
@@ -183,7 +189,7 @@ export default function BentoGrid({
                             ? 'bg-zinc-900 shadow-xs' 
                             : 'bg-zinc-500 hover:bg-zinc-700'
                         }`}
-                        title={`${bar.label}: ${bar.count.toLocaleString('en-IN')} total (${bar.comp} completed, ${bar.incomp} unpaid)`}
+                        title={`${bar.label}: ${bar.count.toLocaleString('en-IN')} total (${bar.ref} refunded, ${bar.unp} unpaid)`}
                       />
                     </div>
                     <span className="text-[10px] font-medium text-zinc-500 group-hover:text-zinc-900 truncate">
@@ -194,57 +200,57 @@ export default function BentoGrid({
               </div>
             )}
 
-            {/* Split Progress Indicator: Completed vs Fee Not Paid */}
+            {/* Split Progress Indicator: Refunded vs Unpaid */}
             <div className="mb-4">
               <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden flex">
                 <div 
-                  style={{ width: `${Math.round((completedCount / (totalCount || 1)) * 100)}%` }}
-                  className="bg-zinc-900 h-full transition-all duration-500"
-                  title={`Completed: ${completedCount} (${completedPct}%)`}
+                  style={{ width: `${Math.max(1, Math.round((refundedCount / (totalCount || 1)) * 100))}%` }}
+                  className="bg-purple-600 h-full transition-all duration-500"
+                  title={`Refunded: ${refundedCount} (${refundedPrecise}%)`}
                 />
                 <div 
-                  style={{ width: `${Math.round((incompleteCount / (totalCount || 1)) * 100)}%` }}
+                  style={{ width: `${Math.round((unpaidCount / (totalCount || 1)) * 100)}%` }}
                   className="bg-amber-400 h-full transition-all duration-500"
-                  title={`Fee Not Paid: ${incompleteCount} (${incompletePct}%)`}
+                  title={`Unpaid: ${unpaidCount} (${unpaidPrecise}%)`}
                 />
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-zinc-500 mt-1.5 font-mono gap-1">
-                <span className="flex items-center gap-1 font-medium text-zinc-800">
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-900 inline-block" />
-                  Completed: {completedCount.toLocaleString('en-IN')} ({completedPct}%)
+                <span className="flex items-center gap-1 font-semibold text-purple-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-600 inline-block" />
+                  Refunded: {refundedCount.toLocaleString('en-IN')} ({refundedPrecise}%)
                 </span>
-                <span className="flex items-center gap-1 font-medium text-amber-700">
+                <span className="flex items-center gap-1 font-semibold text-amber-700">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-                  Fee Not Paid: {incompleteCount.toLocaleString('en-IN')} ({incompletePct}%)
+                  Unpaid: {unpaidCount.toLocaleString('en-IN')} ({unpaidPrecise}%)
                 </span>
               </div>
             </div>
 
-            {/* 2 Stat Tiles: Completed vs Fee Not Paid */}
+            {/* 2 Stat Tiles: Refunded vs Unpaid */}
             <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
-              <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-1 flex items-center justify-between">
-                  <span>COMPLETED</span>
-                  <span className="text-[9px] font-mono text-zinc-400 font-normal">{completedPrecise}%</span>
+              <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-200/70">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-purple-700 mb-1 flex items-center justify-between">
+                  <span>REFUNDED (UNSTOP)</span>
+                  <span className="text-[9px] font-mono text-purple-600 font-normal">{refundedPrecise}%</span>
                 </div>
-                <div className="text-xl font-bold text-zinc-900">
-                  {completedCount.toLocaleString('en-IN')}
+                <div className="text-xl font-bold text-purple-900">
+                  {refundedCount.toLocaleString('en-IN')}
                 </div>
-                <div className="text-[11px] text-zinc-500 mt-0.5">
-                  Registration done
+                <div className="text-[11px] text-purple-700 mt-0.5">
+                  Refund processed
                 </div>
               </div>
 
               <div className="bg-amber-50/60 rounded-xl p-3 border border-amber-100">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-1 flex items-center justify-between">
-                  <span>FEE NOT PAID</span>
-                  <span className="text-[9px] font-mono text-amber-600 font-normal">{incompletePrecise}%</span>
+                  <span>UNPAID LEADS</span>
+                  <span className="text-[9px] font-mono text-amber-600 font-normal">{unpaidPrecise}%</span>
                 </div>
                 <div className="text-xl font-bold text-amber-950">
-                  {incompleteCount.toLocaleString('en-IN')}
+                  {unpaidCount.toLocaleString('en-IN')}
                 </div>
                 <div className="text-[11px] text-amber-700 mt-0.5">
-                  Drop-off leads to call
+                  Pending techfest26.in
                 </div>
               </div>
             </div>
@@ -261,35 +267,36 @@ export default function BentoGrid({
 
 
         {/* ========================================================
-            CARD 2: Total Revenue & Calling Recovery Pipeline
+            CARD 2: Unstop Refunds & Calling Recovery Pipeline
             ======================================================== */}
         <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1">
               <h3 className="font-semibold text-sm text-zinc-900 tracking-tight">
-                Total Revenue & Pipeline
+                Unstop Refunds & Pipeline
               </h3>
-              <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">
-                Live Receipts
+              <span className="text-[10px] font-mono text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                <RotateCcw className="w-2.5 h-2.5" />
+                Refunds Processed
               </span>
             </div>
             <p className="text-xs text-zinc-500 mb-4">
-              Real gateway receipts + recoverable calling pipeline
+              All Unstop payments refunded • Future receipts via techfest26.in
             </p>
 
             {/* Hero Revenue Box */}
             <div className="bg-zinc-900 rounded-xl p-3.5 sm:p-4 text-white mb-4 shadow-xs">
               <div className="flex items-center justify-between text-zinc-400 text-xs mb-1">
-                <span className="font-medium">Direct Unstop Gateway Revenue</span>
-                <span className="text-[10px] font-mono bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-300">
-                  {paidGatewayCount} Paid Receipts
+                <span className="font-medium">Total Unstop Payments Refunded</span>
+                <span className="text-[10px] font-mono bg-purple-950 text-purple-200 border border-purple-800 px-1.5 py-0.5 rounded">
+                  {refundedCount} Refunded
                 </span>
               </div>
               <div className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1">
-                ₹{gatewayRevenue.toLocaleString('en-IN')}
+                ₹{refundedRevenue.toLocaleString('en-IN')}
               </div>
               <div className="text-[11px] text-zinc-400 flex flex-wrap items-center justify-between gap-1 pt-2 border-t border-zinc-800">
-                <span>RC Boat (₹2,995) • Soldering (₹598) • Ghost Code (₹200)</span>
+                <span>RC Boat (₹2,995) • RoboSoccer (₹2,396) • Soldering (₹598) • Kritrim (₹599)</span>
               </div>
             </div>
 
@@ -304,20 +311,20 @@ export default function BentoGrid({
                 </span>
               </div>
               <p className="text-[11px] text-zinc-500 mb-2">
-                {incompleteCount.toLocaleString('en-IN')} unpaid leads × ₹199 standard event entry fee
+                {unpaidCount.toLocaleString('en-IN')} unpaid leads × ₹199 standard event entry fee
               </p>
               
               {/* Recovery Progress Bar */}
               <div className="w-full bg-zinc-200 h-1.5 rounded-full overflow-hidden mb-1.5">
                 <div 
-                  style={{ width: `${Math.min(100, Math.round((calledCount / Math.max(1, incompleteCount)) * 100))}%` }}
+                  style={{ width: `${Math.min(100, Math.round((calledCount / Math.max(1, unpaidCount)) * 100))}%` }}
                   className="bg-zinc-900 h-full rounded-full transition-all duration-500"
                 />
               </div>
 
               <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
                 <span>{calledCount} Calls Logged</span>
-                <span>Target: ₹{Math.round(incompleteCount * 199 * 0.15).toLocaleString('en-IN')} (15% Recovery)</span>
+                <span>Target: ₹{Math.round(unpaidCount * 199 * 0.15).toLocaleString('en-IN')} (15% Recovery)</span>
               </div>
             </div>
 
@@ -330,7 +337,7 @@ export default function BentoGrid({
                 rows={2}
                 value={memoNote}
                 onChange={(e) => setMemoNote(e.target.value)}
-                placeholder="e.g. ₹199 fee includes TechFEST '26 master pass, kits & certificate of participation..."
+                placeholder="e.g. Complete payment on techfest26.in to confirm slot..."
                 className="w-full bg-white border border-zinc-200 rounded-xl p-2.5 text-xs text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-900 resize-none shadow-xs"
               />
             </div>
@@ -367,53 +374,54 @@ export default function BentoGrid({
 
             <div className="space-y-4">
               
-              {/* Target 1: Completed Registrations */}
+              {/* Target 1: Refunded (Unstop) */}
               <div>
                 <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                    COMPLETED REGISTRATIONS
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-700 flex items-center gap-1">
+                    <RotateCcw className="w-3 h-3 text-purple-600" />
+                    REFUNDED (UNSTOP)
                   </span>
-                  <span className="font-mono font-bold text-zinc-900 text-sm">
-                    {completedCount.toLocaleString('en-IN')}
+                  <span className="font-mono font-bold text-purple-900 text-sm">
+                    {refundedCount.toLocaleString('en-IN')}
                   </span>
                 </div>
                 
-                {/* Thick Solid Black Progress Bar */}
+                {/* Purple Progress Bar */}
                 <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden mb-1">
                   <div 
-                    style={{ width: `${Math.min(100, Math.round((completedCount / (totalCount || 1)) * 100))}%` }}
-                    className="bg-zinc-900 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.max(1, Math.round((refundedCount / (totalCount || 1)) * 100))}%` }}
+                    className="bg-purple-600 h-full rounded-full transition-all duration-500"
                   />
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                  <span>{completedPrecise}% completed on portal</span>
-                  <span className="font-medium text-zinc-700">{completedCount} / {totalCount}</span>
+                  <span>{refundedPrecise}% refunded by fest team</span>
+                  <span className="font-medium text-purple-700">{refundedCount} / {totalCount}</span>
                 </div>
               </div>
 
-              {/* Target 2: Registration Fee Not Paid */}
+              {/* Target 2: Unpaid Candidates */}
               <div>
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">
-                    FEE NOT PAID (DROP-OFFS)
+                    UNPAID CANDIDATES
                   </span>
                   <span className="font-mono font-bold text-amber-800 text-sm">
-                    {incompleteCount.toLocaleString('en-IN')}
+                    {unpaidCount.toLocaleString('en-IN')}
                   </span>
                 </div>
 
                 {/* Progress Bar */}
                 <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden mb-1">
                   <div 
-                    style={{ width: `${Math.min(100, Math.round((incompleteCount / (totalCount || 1)) * 100))}%` }}
+                    style={{ width: `${Math.min(100, Math.round((unpaidCount / (totalCount || 1)) * 100))}%` }}
                     className="bg-amber-400 h-full rounded-full transition-all duration-500"
                   />
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                  <span>{incompletePrecise}% drop-off at gateway</span>
-                  <span className="font-medium text-zinc-700">{incompleteCount} / {totalCount}</span>
+                  <span>{unpaidPrecise}% entry fee pending</span>
+                  <span className="font-medium text-amber-700">{unpaidCount} / {totalCount}</span>
                 </div>
               </div>
 

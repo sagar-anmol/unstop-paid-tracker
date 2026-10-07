@@ -1,13 +1,17 @@
 import React from 'react';
-import { Users, DollarSign, Trophy, School } from 'lucide-react';
+import { Users, DollarSign, Trophy, School, RotateCcw } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { isParticipantPaid, isParticipantRefunded, isParticipantUnpaid } from '../utils/paymentUtils';
 
 export default function KPIStrip({ summary, participants }) {
   const totalCount = participants.length;
-  const paidCount = participants.filter(p => p.is_paid === true || p.payment_status === 'PAID' || Number(p.amount) > 0).length;
-  const incompleteCount = participants.filter(p => p.is_paid === false || p.payment_status === 'INCOMPLETE' || p.payment_status === 'UNPAID' || (p.status_label && p.status_label.toLowerCase().includes('not paid'))).length;
-  const totalRevenue = participants.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const paidCount = participants.filter(p => isParticipantPaid(p)).length;
+  const refundedCount = participants.filter(p => isParticipantRefunded(p)).length;
+  const unpaidCount = participants.filter(p => isParticipantUnpaid(p)).length;
+  
+  const totalRevenue = participants.reduce((sum, p) => isParticipantPaid(p) ? sum + (Number(p.amount) || 0) : sum, 0);
+  const refundedRevenue = participants.reduce((sum, p) => isParticipantRefunded(p) ? sum + (Number(p.amount) || 0) : sum, 0);
   
   const totalEvents = summary?.total_events_scanned || 62;
   const eventsWithPaid = summary?.events_with_paid || new Set(participants.map(p => p.event_name)).size;
@@ -22,11 +26,11 @@ export default function KPIStrip({ summary, participants }) {
       badgeText: "LIVE SYNC",
       badgeClass: "bg-sky-50 text-sky-700 border-sky-200",
       valueColor: "text-slate-900",
-      subtext: `${paidCount.toLocaleString('en-IN')} Complete • ${incompleteCount.toLocaleString('en-IN')} Incomplete`,
+      subtext: `${refundedCount.toLocaleString('en-IN')} Refunded • ${unpaidCount.toLocaleString('en-IN')} Unpaid`,
       icon: Users,
       iconBg: "bg-sky-50 text-sky-600"
     },
-    {
+    paidCount > 0 ? {
       label: "Paid Revenue",
       value: `₹${totalRevenue.toLocaleString('en-IN')}`,
       badgeText: "GATEWAY",
@@ -35,6 +39,15 @@ export default function KPIStrip({ summary, participants }) {
       subtext: `${paidCount.toLocaleString('en-IN')} verified paid candidates`,
       icon: DollarSign,
       iconBg: "bg-emerald-50 text-emerald-600"
+    } : {
+      label: "Unstop Refunded",
+      value: `₹${refundedRevenue.toLocaleString('en-IN')}`,
+      badgeText: "REFUNDED",
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      valueColor: "text-purple-700",
+      subtext: `${refundedCount.toLocaleString('en-IN')} refunded • techfest26 pending`,
+      icon: RotateCcw,
+      iconBg: "bg-purple-50 text-purple-600"
     },
     {
       label: "Total Competitions",

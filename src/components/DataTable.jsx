@@ -29,6 +29,12 @@ import { getDomainForEvent, DOMAINS_DIRECTORY } from '../utils/auth';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { 
+  isParticipantRefunded, 
+  isParticipantPaid, 
+  isParticipantUnpaid, 
+  getPaymentBadgeConfig 
+} from '../utils/paymentUtils';
 
 export default function DataTable({ 
   participants = [], 
@@ -85,10 +91,11 @@ export default function DataTable({
           candidateId: p.id,
           allIds: [p.id],
           events: [],
+          totalAmountRefunded: 0,
           totalAmountPaid: 0,
+          refundedEventsCount: 0,
           paidEventsCount: 0,
-          incompleteEventsCount: 0,
-          freeEventsCount: 0,
+          unpaidEventsCount: 0,
           registeredEventNames: []
         });
       }
@@ -99,16 +106,17 @@ export default function DataTable({
       }
 
       const amt = Number(p.amount) || 0;
-      const isPaid = p.is_paid === true || p.payment_status === 'PAID' || amt > 0;
-      const isIncomplete = p.is_paid === false || p.payment_status === 'INCOMPLETE' || p.payment_status === 'UNPAID' || (p.status_label && p.status_label.toLowerCase().includes('not paid'));
+      const isRef = isParticipantRefunded(p);
+      const isPaid = isParticipantPaid(p);
 
-      if (isPaid) {
+      if (isRef) {
+        candidate.refundedEventsCount++;
+        candidate.totalAmountRefunded += amt;
+      } else if (isPaid) {
         candidate.paidEventsCount++;
         candidate.totalAmountPaid += amt;
-      } else if (isIncomplete) {
-        candidate.incompleteEventsCount++;
       } else {
-        candidate.freeEventsCount++;
+        candidate.unpaidEventsCount++;
       }
 
       candidate.events.push({
@@ -117,9 +125,10 @@ export default function DataTable({
         event_id: p.event_id,
         event_name: p.event_name,
         event_type: p.event_type,
-        payment_status: p.payment_status,
+        payment_status: isRef ? 'REFUNDED' : (isPaid ? 'PAID' : 'UNPAID'),
         amount: p.amount,
-        is_paid: p.is_paid,
+        is_paid: isPaid,
+        is_refunded: isRef,
         status_label: p.status_label,
         registered_at: p.registered_at,
         team_name: p.team_name,
@@ -134,16 +143,21 @@ export default function DataTable({
 
     return Array.from(map.values()).map(c => {
       c.eventsCount = c.events.length;
-      if (c.paidEventsCount > 0 && c.incompleteEventsCount === 0) {
+      if (c.refundedEventsCount > 0) {
+        c.payment_status = 'REFUNDED';
+        c.is_refunded = true;
+        c.is_paid = false;
+        c.amount = c.totalAmountRefunded;
+      } else if (c.paidEventsCount > 0) {
         c.payment_status = 'PAID';
+        c.is_paid = true;
+        c.is_refunded = false;
         c.amount = c.totalAmountPaid;
-      } else if (c.paidEventsCount > 0 && c.incompleteEventsCount > 0) {
-        c.payment_status = 'PARTIAL';
-        c.amount = c.totalAmountPaid;
-      } else if (c.incompleteEventsCount > 0) {
-        c.payment_status = 'INCOMPLETE';
       } else {
-        c.payment_status = 'FREE';
+        c.payment_status = 'UNPAID';
+        c.is_paid = false;
+        c.is_refunded = false;
+        c.amount = 0;
       }
       return c;
     });
@@ -175,15 +189,15 @@ export default function DataTable({
   // Payment counts
   const paymentCounts = useMemo(() => {
     if (isGroupedMode) {
-      const paid = activeDataset.filter(p => p.paidEventsCount > 0 && p.incompleteEventsCount === 0).length;
-      const partial = activeDataset.filter(p => p.paidEventsCount > 0 && p.incompleteEventsCount > 0).length;
-      const incomplete = activeDataset.filter(p => p.incompleteEventsCount > 0 && p.paidEventsCount === 0).length;
-      const free = Math.max(0, activeDataset.length - paid - partial - incomplete);
-      return { all: activeDataset.length, paid, partial, incomplete, free };
+      const refunded = activeDataset.filter(p => p.refundedEventsCount > 0).length;
+      const paid = activeDataset.filter(p => p.paidEventsCount > 0 && (p.refundedEventsCount === 0 || !p.refundedEventsCount)).length;
+      const unpaid = activeDataset.filter(p => (!p.refundedEventsCount || p.refundedEventsCount === 0) && (!p.paidEventsCount || p.paidEventsCount === 0)).length;
+      return { all: activeDataset.length, refunded, unpaid, paid };
     }
-    const paid = participants.filter(p => p.is_paid === true || p.payment_status === 'PAID' || Number(p.amount) > 0).length;
-    const incomplete = participants.filter(p => p.is_paid === false || p.payment_status === 'INCOMPLETE' || p.payment_status === 'UNPAID' || (p.status_label && p.status_label.toLowerCase().includes('not paid'))).length;
-    return { all: participants.length, paid, partial: 0, incomplete, free: Math.max(0, participants.length - paid - incomplete) };
+    const refunded = participants.filter(p => isParticipantRefunded(p)).length;
+    const paid = participants.filter(p => isParticipantPaid(p)).length;
+    const unpaid = participants.filter(p => isParticipantUnpaid(p)).length;
+    return { all: participants.length, refunded, unpaid, paid };
   }, [activeDataset, isGroupedMode, participants]);
 
   // Master events list for dropdown (guaranteed to include all domain events)
@@ -242,17 +256,21 @@ export default function DataTable({
         }
       }
 
-      // 2. Payment
-      if (isGroupedMode) {
-        if (selectedPayment === 'paid' && p.paidEventsCount === 0) return false;
-        if (selectedPayment === 'incomplete' && p.incompleteEventsCount === 0) return false;
-        if (selectedPayment === 'free' && (p.paidEventsCount > 0 || p.incompleteEventsCount > 0)) return false;
-      } else {
-        const isPaid = p.is_paid === true || p.payment_status === 'PAID' || Number(p.amount) > 0;
-        const isIncomplete = p.is_paid === false || p.payment_status === 'INCOMPLETE' || p.payment_status === 'UNPAID' || (p.status_label && p.status_label.toLowerCase().includes('not paid'));
-        if (selectedPayment === 'paid' && !isPaid) return false;
-        if (selectedPayment === 'incomplete' && !isIncomplete) return false;
-        if (selectedPayment === 'free' && (isPaid || isIncomplete)) return false;
+      // 2. Payment Filter
+      if (selectedPayment !== 'all') {
+        if (isGroupedMode) {
+          if (selectedPayment === 'refunded' && (!p.refundedEventsCount || p.refundedEventsCount === 0)) return false;
+          if (selectedPayment === 'paid' && (!p.paidEventsCount || p.paidEventsCount === 0)) return false;
+          if (selectedPayment === 'unpaid' && (p.refundedEventsCount > 0 || p.paidEventsCount > 0)) return false;
+        } else {
+          const isRef = isParticipantRefunded(p);
+          const isPaid = isParticipantPaid(p);
+          const isUnp = isParticipantUnpaid(p);
+
+          if (selectedPayment === 'refunded' && !isRef) return false;
+          if (selectedPayment === 'paid' && !isPaid) return false;
+          if (selectedPayment === 'unpaid' && !isUnp) return false;
+        }
       }
 
       // 3. Calling Status Filter
@@ -472,9 +490,9 @@ export default function DataTable({
           <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 border border-zinc-200/80 overflow-x-auto scrollbar-none">
             {[
               { id: 'all', label: 'All', count: paymentCounts.all, countClass: 'text-zinc-500' },
-              { id: 'paid', label: 'Complete', count: paymentCounts.paid, countClass: 'text-zinc-900 font-semibold' },
-              { id: 'incomplete', label: 'Incomplete', count: paymentCounts.incomplete, countClass: 'text-zinc-700 font-semibold' },
-              { id: 'free', label: 'Free', count: paymentCounts.free, countClass: 'text-zinc-500' }
+              { id: 'refunded', label: 'Refunded', count: paymentCounts.refunded, countClass: 'text-purple-700 bg-purple-50 font-semibold px-1 rounded' },
+              { id: 'unpaid', label: 'Unpaid', count: paymentCounts.unpaid, countClass: 'text-amber-800 bg-amber-50 font-semibold px-1 rounded' },
+              ...(paymentCounts.paid > 0 ? [{ id: 'paid', label: 'Paid', count: paymentCounts.paid, countClass: 'text-emerald-700 font-semibold px-1 rounded' }] : [])
             ].map(p => {
               const isActive = selectedPayment === p.id;
               return (
@@ -924,57 +942,46 @@ export default function DataTable({
                     <td className="py-3 px-3 text-right">
                       {isGroupedMode && p.eventsCount > 1 ? (
                         <div className="space-y-0.5 text-right">
-                          {p.paidEventsCount > 0 && p.incompleteEventsCount === 0 && (
+                          {p.refundedEventsCount > 0 ? (
                             <div>
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200">
-                                <span>{p.totalAmountPaid > 0 ? `₹${p.totalAmountPaid.toLocaleString('en-IN')}` : 'All Paid'}</span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold text-purple-700 bg-purple-50 border border-purple-200">
+                                <RotateCcw className="w-3 h-3 text-purple-600" />
+                                <span>{p.totalAmountRefunded > 0 ? `Refunded ₹${p.totalAmountRefunded.toLocaleString('en-IN')}` : 'Refunded'}</span>
                               </span>
-                              <div className="text-[10px] font-mono text-emerald-600 mt-0.5">{p.paidEventsCount} events paid</div>
-                            </div>
-                          )}
-                          {p.paidEventsCount > 0 && p.incompleteEventsCount > 0 && (
-                            <div>
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-mono font-semibold text-sky-800 bg-sky-50 border border-sky-200">
-                                <span>{p.totalAmountPaid > 0 ? `₹${p.totalAmountPaid}` : 'Partial'}</span>
-                              </span>
-                              <div className="text-[10px] font-mono text-slate-500 mt-0.5 whitespace-nowrap">
-                                <span className="text-emerald-700 font-semibold">{p.paidEventsCount}P</span>
-                                <span> • </span>
-                                <span className="text-amber-700 font-semibold">{p.incompleteEventsCount} unpaid</span>
+                              <div className="text-[10px] font-mono text-purple-600 mt-0.5">
+                                {p.refundedEventsCount} refunded • {p.unpaidEventsCount} unpaid
                               </div>
                             </div>
-                          )}
-                          {p.paidEventsCount === 0 && p.incompleteEventsCount > 0 && (
+                          ) : p.paidEventsCount > 0 ? (
                             <div>
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-semibold text-amber-800 bg-amber-50 border border-amber-200" title="Registration Fee Pending">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                <span>Incomplete</span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200">
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span>{p.totalAmountPaid > 0 ? `Paid ₹${p.totalAmountPaid}` : 'Paid'}</span>
                               </span>
-                              <div className="text-[10px] font-mono text-amber-700 mt-0.5">{p.incompleteEventsCount} unpaid</div>
                             </div>
-                          )}
-                          {p.paidEventsCount === 0 && p.incompleteEventsCount === 0 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono text-slate-600 bg-slate-100 border border-slate-200">
-                              Free Entry
-                            </span>
+                          ) : (
+                            <div>
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-semibold text-amber-800 bg-amber-50 border border-amber-200" title="Entry fee pending on techfest26.in">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                <span>Unpaid</span>
+                              </span>
+                              <div className="text-[10px] font-mono text-amber-700 mt-0.5">{p.eventsCount} events unpaid</div>
+                            </div>
                           )}
                         </div>
                       ) : (
                         <div>
-                          {amt > 0 || p.payment_status === 'PAID' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200">
-                              <span>{amt > 0 ? `₹${amt.toLocaleString('en-IN')}` : 'Paid'}</span>
-                            </span>
-                          ) : p.payment_status === 'INCOMPLETE' || (p.status_label && p.status_label.toLowerCase().includes('not paid')) ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-semibold text-amber-800 bg-amber-50 border border-amber-200" title="Registration Fee Pending">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                              <span>Incomplete</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono text-slate-600 bg-slate-100 border border-slate-200">
-                              Free Entry
-                            </span>
-                          )}
+                          {(() => {
+                            const badge = getPaymentBadgeConfig(p);
+                            return (
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold border ${badge.className}`}>
+                                {badge.type === 'REFUNDED' && <RotateCcw className="w-3 h-3 text-purple-600" />}
+                                {badge.type === 'UNPAID' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
+                                {badge.type === 'PAID' && <Check className="w-3 h-3 text-emerald-600" />}
+                                <span>{badge.label}</span>
+                              </span>
+                            );
+                          })()}
                         </div>
                       )}
                     </td>
@@ -1044,37 +1051,28 @@ export default function DataTable({
                   </div>
 
                   {isGroupedMode && p.eventsCount > 1 ? (
-                    p.paidEventsCount > 0 && p.incompleteEventsCount === 0 ? (
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 shrink-0">
-                        {p.totalAmountPaid > 0 ? `₹${p.totalAmountPaid}` : 'Paid'}
+                    p.refundedEventsCount > 0 ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10.5px] font-mono font-semibold text-purple-700 bg-purple-50 border border-purple-200 shrink-0">
+                        {p.totalAmountRefunded > 0 ? `Refunded ₹${p.totalAmountRefunded}` : 'Refunded'}
                       </span>
-                    ) : p.paidEventsCount > 0 && p.incompleteEventsCount > 0 ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold text-sky-800 bg-sky-50 border border-sky-200 shrink-0">
-                        {p.paidEventsCount}P • {p.incompleteEventsCount} unpaid
-                      </span>
-                    ) : p.incompleteEventsCount > 0 ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold text-amber-800 bg-amber-50 border border-amber-200 shrink-0">
-                        Incomplete ({p.incompleteEventsCount})
+                    ) : p.paidEventsCount > 0 ? (
+                      <span className="px-2 py-0.5 rounded-full text-[10.5px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 shrink-0">
+                        Paid
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-slate-600 bg-slate-100 border border-slate-200 shrink-0">
-                        Free
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold text-amber-800 bg-amber-50 border border-amber-200 shrink-0">
+                        Unpaid ({p.eventsCount})
                       </span>
                     )
                   ) : (
-                    amt > 0 || p.payment_status === 'PAID' ? (
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 shrink-0">
-                        {amt > 0 ? `₹${amt}` : 'Paid'}
-                      </span>
-                    ) : p.payment_status === 'INCOMPLETE' || (p.status_label && p.status_label.toLowerCase().includes('not paid')) ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold text-amber-800 bg-amber-50 border border-amber-200 shrink-0">
-                        Incomplete
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-slate-600 bg-slate-100 border border-slate-200 shrink-0">
-                        Free
-                      </span>
-                    )
+                    (() => {
+                      const badge = getPaymentBadgeConfig(p);
+                      return (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border shrink-0 ${badge.className}`}>
+                          {badge.pillText}
+                        </span>
+                      );
+                    })()
                   )}
                 </div>
 

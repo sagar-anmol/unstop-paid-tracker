@@ -23,6 +23,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DOMAINS_DIRECTORY } from '../utils/auth';
+import { 
+  isParticipantRefunded, 
+  isParticipantPaid, 
+  isParticipantUnpaid 
+} from '../utils/paymentUtils';
 
 export default function AntiGravityReportModal({ 
   isOpen, 
@@ -37,17 +42,15 @@ export default function AntiGravityReportModal({
 
   // Real calculations
   const totalCount = participants.length;
-  const incompleteCount = participants.filter(p => 
-    p.payment_status === 'INCOMPLETE' || 
-    p.payment_status === 'UNPAID' || 
-    (p.status_label && p.status_label.toLowerCase().includes('not paid'))
-  ).length;
-  const completedCount = Math.max(0, totalCount - incompleteCount);
-  const gatewayRevenue = participants.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-  const pipelineValue = incompleteCount * 199;
-  const verifiedReceiptsCount = participants.filter(p => Number(p.amount) > 0).length;
-  const completedPct = totalCount > 0 ? ((completedCount / totalCount) * 100).toFixed(1) : '0.0';
-  const incompletePct = totalCount > 0 ? ((incompleteCount / totalCount) * 100).toFixed(1) : '0.0';
+  const refundedCount = participants.filter(p => isParticipantRefunded(p)).length;
+  const unpaidCount = participants.filter(p => isParticipantUnpaid(p)).length;
+  const paidCount = participants.filter(p => isParticipantPaid(p)).length;
+
+  const refundedRevenue = participants.reduce((sum, p) => isParticipantRefunded(p) ? sum + (Number(p.amount) || 0) : sum, 0);
+  const gatewayRevenue = participants.reduce((sum, p) => isParticipantPaid(p) ? sum + (Number(p.amount) || 0) : sum, 0);
+  const pipelineValue = unpaidCount * 199;
+  const refundedPct = totalCount > 0 ? ((refundedCount / totalCount) * 100).toFixed(1) : '0.0';
+  const unpaidPct = totalCount > 0 ? ((unpaidCount / totalCount) * 100).toFixed(1) : '0.0';
 
   const handlePrint = () => {
     window.print();
@@ -64,10 +67,9 @@ export default function AntiGravityReportModal({
 
 ## 1. Executive Metric Summary
 * **Total Scanned Registrations:** ${totalCount.toLocaleString('en-IN')}
-* **Direct Gateway Revenue Collected:** ₹${gatewayRevenue.toLocaleString('en-IN')} (${verifiedReceiptsCount} Verified Receipts)
-* **Recoverable Calling Pipeline:** ₹${pipelineValue.toLocaleString('en-IN')} (${incompleteCount.toLocaleString('en-IN')} Leads @ ₹199)
-* **Completed Registrations:** ${completedCount.toLocaleString('en-IN')} (${completedPct}%)
-* **Fee Not Paid / Drop-offs:** ${incompleteCount.toLocaleString('en-IN')} (${incompletePct}%)
+* **Unstop Refunds Processed:** ₹${refundedRevenue.toLocaleString('en-IN')} (${refundedCount} Candidates Refunded)
+* **Recoverable Calling Pipeline:** ₹${pipelineValue.toLocaleString('en-IN')} (${unpaidCount.toLocaleString('en-IN')} Leads @ ₹199)
+* **Unpaid Registrations:** ${unpaidCount.toLocaleString('en-IN')} (${unpaidPct}% - Pending techfest26.in)
 * **Event Scale:** 62 Competitions across 13 Technical Domains
 
 ---
@@ -156,15 +158,15 @@ export default function AntiGravityReportModal({
           
           {/* Executive Metrics Strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200/80">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
-                GATEWAY REVENUE
+            <div className="p-3 bg-purple-50/70 rounded-xl border border-purple-200/80">
+              <span className="text-[10px] font-mono text-purple-700 uppercase tracking-wider block mb-1">
+                UNSTOP REFUNDED
               </span>
-              <span className="text-xl font-bold text-emerald-700">
-                ₹{gatewayRevenue.toLocaleString('en-IN')}
+              <span className="text-xl font-bold text-purple-900">
+                ₹{refundedRevenue.toLocaleString('en-IN')}
               </span>
-              <span className="text-[10px] text-zinc-500 block mt-0.5">
-                {verifiedReceiptsCount} Verified Receipts
+              <span className="text-[10px] text-purple-600 block mt-0.5">
+                {refundedCount} Candidates Refunded
               </span>
             </div>
 
@@ -176,19 +178,19 @@ export default function AntiGravityReportModal({
                 ₹{pipelineValue.toLocaleString('en-IN')}
               </span>
               <span className="text-[10px] text-amber-700 block mt-0.5">
-                {incompleteCount.toLocaleString('en-IN')} Unpaid Leads
+                {unpaidCount.toLocaleString('en-IN')} Unpaid Leads
               </span>
             </div>
 
-            <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200/80">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
-                COMPLETED
+            <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/80">
+              <span className="text-[10px] font-mono text-amber-800 uppercase tracking-wider block mb-1">
+                UNPAID LEADS
               </span>
-              <span className="text-xl font-bold text-zinc-900">
-                {completedCount.toLocaleString('en-IN')}
+              <span className="text-xl font-bold text-amber-950">
+                {unpaidCount.toLocaleString('en-IN')}
               </span>
-              <span className="text-[10px] text-emerald-700 block mt-0.5">
-                {completedPct}% Conversion
+              <span className="text-[10px] text-amber-700 block mt-0.5">
+                {unpaidPct}% Pending Payment
               </span>
             </div>
 

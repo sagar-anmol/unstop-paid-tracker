@@ -52,6 +52,7 @@ export function applyParticipantOverrides(participants) {
     if (ovr.payment_status) {
       merged.payment_status = ovr.payment_status;
       merged.is_paid = ovr.payment_status === 'PAID';
+      merged.is_refunded = ovr.payment_status === 'REFUNDED';
     }
     if (ovr.amount !== undefined && ovr.amount !== null && ovr.amount !== '') {
       merged.amount = Number(ovr.amount);

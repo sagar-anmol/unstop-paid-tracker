@@ -279,6 +279,7 @@ export default function App() {
           const merged = { ...p, ...updatedFields };
           if (updatedFields.payment_status) {
             merged.is_paid = updatedFields.payment_status === 'PAID';
+            merged.is_refunded = updatedFields.payment_status === 'REFUNDED';
           }
           if (updatedFields.amount !== undefined) {
             merged.amount = Number(updatedFields.amount);
@@ -299,6 +300,7 @@ export default function App() {
         const merged = { ...curr, ...updatedFields };
         if (updatedFields.payment_status) {
           merged.is_paid = updatedFields.payment_status === 'PAID';
+          merged.is_refunded = updatedFields.payment_status === 'REFUNDED';
         }
         if (updatedFields.amount !== undefined) {
           merged.amount = Number(updatedFields.amount);
