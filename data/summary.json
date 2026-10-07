@@ -1,9 +1,9 @@
 {
-  "last_synced_at": "2026-10-06T22:08:27.302333+00:00",
-  "token_expires_at": "2026-10-07T22:08:28.196264+00:00",
+  "last_synced_at": "2026-10-07T03:45:17.682087+00:00",
+  "token_expires_at": "2026-10-08T03:45:18.585917+00:00",
   "auth_mode": "automated_login",
-  "total_unstop_registrations": 4693,
-  "total_paid_registrations": 4640,
+  "total_unstop_registrations": 4699,
+  "total_paid_registrations": 4646,
   "total_incomplete_registrations": 53,
   "total_amount_collected": 2396.0,
   "total_colleges": 270,
@@ -286,16 +286,16 @@
       "id": 1744220,
       "title": "Debug and Deploy",
       "type": "competitions",
-      "total_registrations": 151,
-      "paid_registrations": 151,
+      "total_registrations": 154,
+      "paid_registrations": 154,
       "incomplete_registrations": 0
     },
     {
       "id": 1744219,
       "title": "Aqua Clean",
       "type": "competitions",
-      "total_registrations": 77,
-      "paid_registrations": 77,
+      "total_registrations": 78,
+      "paid_registrations": 78,
       "incomplete_registrations": 0
     },
     {
@@ -526,16 +526,16 @@
       "id": 1743774,
       "title": "Kritrim - Model Exhibition",
       "type": "competitions",
-      "total_registrations": 59,
-      "paid_registrations": 59,
+      "total_registrations": 60,
+      "paid_registrations": 60,
       "incomplete_registrations": 0
     },
     {
       "id": 1742433,
       "title": "Jugaad",
       "type": "hackathons",
-      "total_registrations": 64,
-      "paid_registrations": 64,
+      "total_registrations": 65,
+      "paid_registrations": 65,
       "incomplete_registrations": 0
     },
     {
