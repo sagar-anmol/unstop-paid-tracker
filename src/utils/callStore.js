@@ -68,6 +68,22 @@ export const CALL_STATUSES = {
   }
 };
 
+export function formatCallTime(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return `Today, ${timeStr}`;
+  
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return `Yesterday, ${timeStr}`;
+  
+  return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${timeStr}`;
+}
+
 const CALL_RECORDS_KEY = 'tf_call_records_v2';
 const AUDIT_LOGS_KEY = 'tf_audit_logs_v2';
 const MANUAL_VERIFICATIONS_KEY = 'tf_payment_verifications_v2';
@@ -323,6 +339,9 @@ export function logCallForParticipant({
     participantId: pId,
     callCount: newCallNumber,
     lastCalledAt: nowIso,
+    lastCallerName: callerUser.name,
+    lastCallerRole: callerUser.role,
+    lastCallerTeam: callerUser.teamName || callerUser.team,
     lastStatus: status,
     lastRemark: callEntry.remark,
     leadNumber: callEntry.leadNumber,

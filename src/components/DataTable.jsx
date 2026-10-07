@@ -24,7 +24,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { getAvatarStyle, getInitials } from '../utils/avatar';
-import { getCallRecords, getParticipantCallRecord, CALL_STATUSES } from '../utils/callStore';
+import { getCallRecords, getParticipantCallRecord, CALL_STATUSES, formatCallTime } from '../utils/callStore';
 import { getDomainForEvent, DOMAINS_DIRECTORY } from '../utils/auth';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -199,6 +199,21 @@ export default function DataTable({
     const unpaid = participants.filter(p => isParticipantUnpaid(p)).length;
     return { all: participants.length, refunded, unpaid, paid };
   }, [activeDataset, isGroupedMode, participants]);
+
+  // Calling counts for quick segmented filter (to prevent duplicate calls)
+  const callCounts = useMemo(() => {
+    let called = 0;
+    let neverCalled = 0;
+    activeDataset.forEach(p => {
+      const rec = getParticipantCallRecord(p);
+      if (rec && (rec.callCount || 0) > 0) {
+        called++;
+      } else {
+        neverCalled++;
+      }
+    });
+    return { all: activeDataset.length, called, neverCalled };
+  }, [activeDataset, callDbVersion]);
 
   // Master events list for dropdown (guaranteed to include all domain events)
   const masterEvents = useMemo(() => {
@@ -512,6 +527,32 @@ export default function DataTable({
             })}
           </div>
 
+          {/* Quick Calling Desk Filter Tray (Duplicate Call Prevention) */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 border border-zinc-200/80 overflow-x-auto scrollbar-none" title="Quick Calling Desk Filters">
+            {[
+              { id: 'all', label: 'All Calling', count: callCounts.all, countClass: 'text-zinc-500' },
+              { id: 'never_called', label: '📞 Fresh / To Call', count: callCounts.neverCalled, countClass: 'text-emerald-700 bg-emerald-50 font-semibold px-1 rounded' },
+              { id: 'called', label: '✓ Already Called', count: callCounts.called, countClass: 'text-amber-800 bg-amber-50 font-semibold px-1 rounded' }
+            ].map(c => {
+              const isActive = selectedCallStatus === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => { setSelectedCallStatus(c.id); setCurrentPage(1); }}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    isActive 
+                      ? 'bg-white text-zinc-900 shadow-xs font-semibold' 
+                      : 'text-zinc-600 hover:text-zinc-900'
+                  }`}
+                  title={c.id === 'never_called' ? 'Filter to fresh leads who have NOT been called yet' : c.id === 'called' ? 'Filter to leads who have already been called' : 'Show all leads'}
+                >
+                  <span>{c.label}</span>
+                  <span className={`text-[10px] font-mono ${c.countClass}`}>({c.count})</span>
+                </button>
+              );
+            })}
+          </div>
+
         </div>
 
       </div>
@@ -717,6 +758,15 @@ export default function DataTable({
                                 <span>{p.eventsCount} Events</span>
                               </span>
                             )}
+                            {callCount > 0 && (
+                              <span 
+                                className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9.5px] font-semibold bg-amber-50 text-amber-900 border border-amber-300 shrink-0" 
+                                title={`Already contacted ${callCount} time(s). Last by ${rec?.lastCallerName || rec?.history?.[0]?.callerName || 'Staff'} on ${formatCallTime(rec?.lastCalledAt)}`}
+                              >
+                                <PhoneCall className="w-2.5 h-2.5 text-amber-600" />
+                                <span>Called ({callCount})</span>
+                              </span>
+                            )}
                           </div>
                           <div 
                             className="flex items-center gap-1 font-mono text-[11px] text-slate-500 mt-0.5"
@@ -744,19 +794,30 @@ export default function DataTable({
                     {/* Phone & Direct Calling */}
                     <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
                       {p.phone && p.phone !== 'N/A' ? (
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           <div className="flex items-center gap-1.5 font-mono text-[11.5px] text-slate-700">
                             <span>{p.phone}</span>
 
-                            {/* Direct Phone Call Button */}
-                            <button
-                              onClick={() => onTriggerCall && onTriggerCall(p)}
-                              title="Direct Phone Call & Log Remarks"
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-zinc-900 hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
-                            >
-                              <PhoneCall className="w-3 h-3 text-white" />
-                              <span className="font-mono text-[10px]">{callCount > 0 ? `${callCount} calls` : 'Call'}</span>
-                            </button>
+                            {/* Direct Phone Call / Re-Call Button */}
+                            {callCount > 0 ? (
+                              <button
+                                onClick={() => onTriggerCall && onTriggerCall(p)}
+                                title={`Already contacted ${callCount} time(s). Last by ${rec.lastCallerName || rec.history?.[0]?.callerName || 'Staff'} on ${formatCallTime(rec.lastCalledAt)}. Click to log follow-up call.`}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-colors shadow-2xs cursor-pointer"
+                              >
+                                <PhoneCall className="w-3 h-3 text-amber-600" />
+                                <span>Re-Call ({callCount})</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => onTriggerCall && onTriggerCall(p)}
+                                title="Direct Phone Call & Log Remarks"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium text-white bg-zinc-900 hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
+                              >
+                                <PhoneCall className="w-3 h-3 text-white" />
+                                <span className="font-mono text-[10px]">Call</span>
+                              </button>
+                            )}
 
                             {/* WhatsApp Button */}
                             {waLink && (
@@ -772,22 +833,32 @@ export default function DataTable({
                             )}
                           </div>
 
-                          {/* Dynamic Calling Status Badge & Remark */}
-                          {statusDef ? (
-                            <div className="space-y-0.5">
-                              <div className="flex items-center gap-1.5">
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono border font-medium ${statusDef.badge}`}>
-                                  <span className={`w-1.5 h-1.5 rounded-full ${statusDef.indicator}`} />
-                                  <span>{statusDef.label || statusDef.shortLabel}</span>
+                          {/* Dynamic Calling Status Badge, Caller Name, Time & Remark */}
+                          {callCount > 0 ? (
+                            <div className="p-1.5 rounded-lg bg-amber-50/70 border border-amber-200/90 space-y-1 max-w-[250px] shadow-2xs">
+                              <div className="flex items-center justify-between gap-1 text-[10px]">
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded font-mono border font-semibold ${statusDef?.badge || 'bg-amber-100 text-amber-800 border-amber-300'}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${statusDef?.indicator || 'bg-amber-500'}`} />
+                                  <span>{statusDef?.label || rec.lastStatus || 'Called'}</span>
+                                </span>
+                                <span className="text-[9.5px] font-medium text-amber-800 shrink-0 font-mono">
+                                  {formatCallTime(rec.lastCalledAt)}
+                                </span>
+                              </div>
+
+                              <div className="text-[10px] text-amber-950 font-medium flex items-center justify-between gap-1">
+                                <span className="truncate">
+                                  👤 By: <span className="font-semibold text-amber-900">{rec.lastCallerName || rec.history?.[0]?.callerName || 'Staff'}</span>
                                 </span>
                                 {rec.leadNumber && (
-                                  <span className="text-[10px] font-mono text-slate-500">
+                                  <span className="text-[9.5px] font-mono text-amber-700 bg-amber-100/80 px-1 rounded">
                                     #{rec.leadNumber}
                                   </span>
                                 )}
                               </div>
+
                               {rec.lastRemark && rec.lastRemark !== 'No remarks entered.' && (
-                                <div className="text-[10px] text-slate-500 truncate max-w-[190px] italic" title={rec.lastRemark}>
+                                <div className="text-[9.5px] text-slate-700 bg-white/90 p-1 rounded border border-amber-200/70 truncate italic" title={rec.lastRemark}>
                                   "{rec.lastRemark}"
                                 </div>
                               )}
@@ -795,7 +866,7 @@ export default function DataTable({
                           ) : (
                             <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                              <span>Never Called</span>
+                              <span>Never Called (Fresh Lead)</span>
                             </div>
                           )}
                         </div>
@@ -1129,48 +1200,76 @@ export default function DataTable({
                 )}
 
                 {/* Call Status & Direct Action Buttons */}
-                <div className="flex items-center justify-between pt-1 gap-2" onClick={(e) => e.stopPropagation()}>
-                  <div className="min-w-0 flex-1 pr-1">
-                    {statusDef ? (
-                      <div className="min-w-0">
-                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono border font-medium ${statusDef.badge}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${statusDef.indicator}`} />
-                          <span>{statusDef.label || statusDef.shortLabel}</span>
+                <div className="pt-2 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                  {callCount > 0 ? (
+                    <div className="p-2 rounded-lg bg-amber-50/80 border border-amber-200/90 space-y-1 mb-2">
+                      <div className="flex items-center justify-between gap-1 text-[10.5px]">
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded font-mono border font-semibold ${statusDef?.badge || 'bg-amber-100 text-amber-800 border-amber-300'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusDef?.indicator || 'bg-amber-500'}`} />
+                          <span>{statusDef?.label || rec.lastStatus || 'Called'}</span>
                         </span>
-                        {rec.lastRemark && rec.lastRemark !== 'No remarks entered.' && (
-                          <div className="text-[10px] text-slate-500 truncate max-w-[170px] italic mt-0.5" title={rec.lastRemark}>
-                            "{rec.lastRemark}"
-                          </div>
+                        <span className="text-[10px] font-medium text-amber-900 font-mono">
+                          {formatCallTime(rec.lastCalledAt)}
+                        </span>
+                      </div>
+
+                      <div className="text-[10.5px] text-amber-950 font-medium flex items-center justify-between">
+                        <span>👤 Called by: <strong className="text-amber-900">{rec.lastCallerName || rec.history?.[0]?.callerName || 'Staff'}</strong></span>
+                        {rec.leadNumber && (
+                          <span className="text-[9.5px] font-mono text-amber-800 bg-amber-100 px-1 rounded">
+                            #{rec.leadNumber}
+                          </span>
                         )}
                       </div>
-                    ) : (
-                      <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                        <span>Never Called</span>
-                      </span>
-                    )}
-                  </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {p.phone && p.phone !== 'N/A' && (
-                      <button
-                        onClick={() => onTriggerCall && onTriggerCall(p)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 transition-all shadow-xs cursor-pointer active:scale-95"
-                      >
-                        <PhoneCall className="w-3 h-3 text-white" />
-                        <span>Call {callCount > 0 ? `(${callCount})` : ''}</span>
-                      </button>
-                    )}
-                    {waLink && (
-                      <a
-                        href={waLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 shadow-xs"
-                      >
-                        WA
-                      </a>
-                    )}
+                      {rec.lastRemark && rec.lastRemark !== 'No remarks entered.' && (
+                        <div className="text-[10px] text-slate-700 bg-white/90 p-1.5 rounded border border-amber-200/60 italic" title={rec.lastRemark}>
+                          "{rec.lastRemark}"
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[10.5px] font-mono text-slate-400">
+                      {callCount > 0 ? (
+                        <span className="text-amber-800 font-semibold font-sans flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          <span>Contacted ({callCount}x)</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                          <span>Never Called</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {p.phone && p.phone !== 'N/A' && (
+                        <button
+                          onClick={() => onTriggerCall && onTriggerCall(p)}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-xs cursor-pointer active:scale-95 ${
+                            callCount > 0
+                              ? 'bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100'
+                              : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+                          }`}
+                        >
+                          <PhoneCall className={`w-3 h-3 ${callCount > 0 ? 'text-amber-600' : 'text-white'}`} />
+                          <span>{callCount > 0 ? `Re-Call (${callCount})` : 'Call'}</span>
+                        </button>
+                      )}
+                      {waLink && (
+                        <a
+                          href={waLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 shadow-xs"
+                        >
+                          WA
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

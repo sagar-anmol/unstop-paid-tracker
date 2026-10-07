@@ -14,7 +14,8 @@ import {
   QrCode,
   Copy,
   Calendar,
-  CreditCard
+  CreditCard,
+  AlertTriangle
 } from 'lucide-react';
 import {
   Dialog,
@@ -27,7 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CALL_STATUSES, getParticipantCallRecord } from '../utils/callStore';
+import { CALL_STATUSES, getParticipantCallRecord, formatCallTime } from '../utils/callStore';
 import { getDeviceInfo, setCustomDeviceName, getCustomDeviceName } from '../utils/device';
 
 export default function CallRemarkModal({ 
@@ -50,7 +51,7 @@ export default function CallRemarkModal({
   const [isEditingStation, setIsEditingStation] = useState(false);
   const [stationName, setStationName] = useState(() => getCustomDeviceName());
 
-  const existingRecord = participant ? getParticipantCallRecord(participant.id) : null;
+  const existingRecord = participant ? getParticipantCallRecord(participant) : null;
   const nextCallNum = (existingRecord?.callCount || 0) + 1;
 
   useEffect(() => {
@@ -167,6 +168,29 @@ export default function CallRemarkModal({
             <span>Redial</span>
           </Button>
         </div>
+
+        {/* Warning if already contacted */}
+        {existingRecord && existingRecord.callCount > 0 && (
+          <div className="mx-5 mt-3 p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs space-y-1">
+            <div className="flex items-center justify-between font-bold">
+              <span className="flex items-center gap-1.5 text-amber-900">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                Already Contacted ({existingRecord.callCount} previous call{existingRecord.callCount > 1 ? 's' : ''})
+              </span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-semibold border border-amber-300">
+                Avoid Duplicate Call
+              </span>
+            </div>
+            <p className="text-[11px] text-amber-850">
+              Last contacted by <span className="font-semibold">{existingRecord.lastCallerName || existingRecord.history?.[0]?.callerName || 'Staff'}</span> on <span className="font-semibold">{formatCallTime(existingRecord.lastCalledAt)}</span> • Status: <span className="font-semibold">{CALL_STATUSES[existingRecord.lastStatus]?.label || existingRecord.lastStatus}</span>
+            </p>
+            {existingRecord.lastRemark && existingRecord.lastRemark !== 'No remarks entered.' && (
+              <p className="text-[11px] font-mono bg-white/90 p-1.5 rounded border border-amber-200 text-slate-850 italic">
+                "{existingRecord.lastRemark}"
+              </p>
+            )}
+          </div>
+        )}
 
         {/* UPI QR Code Expandable Panel (Requested by Sliet Hub for on-spot registration) */}
         {showQrCode && (

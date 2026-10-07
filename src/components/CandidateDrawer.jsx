@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
 import { getAvatarStyle, getInitials } from '../utils/avatar';
-import { getParticipantCallRecord, CALL_STATUSES } from '../utils/callStore';
+import { getParticipantCallRecord, CALL_STATUSES, formatCallTime } from '../utils/callStore';
 import { getDomainForEvent } from '../utils/auth';
 import { 
   isParticipantRefunded, 
@@ -68,7 +68,7 @@ export default function CandidateDrawer({
   // Retrieve call history & timeline
   const callRecord = useMemo(() => {
     if (!participant) return null;
-    return getParticipantCallRecord(participant.id) || (participant.internal_id ? getParticipantCallRecord(participant.internal_id) : null);
+    return getParticipantCallRecord(participant);
   }, [participant, callDbVersion]);
   const callCount = callRecord?.callCount || 0;
   const history = callRecord?.history || [];
@@ -186,18 +186,56 @@ export default function CandidateDrawer({
           {/* Body Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-50/40">
             
+            {/* ALREADY CONTACTED WARNING CARD */}
+            {callCount > 0 && (
+              <div className="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300 text-amber-950 shadow-xs space-y-1.5 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold text-xs text-amber-900">
+                    <PhoneCall className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Already Contacted ({callCount} {callCount === 1 ? 'call' : 'calls'} logged)</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-amber-200/90 text-amber-950 border border-amber-300">
+                    Do Not Re-Call
+                  </span>
+                </div>
+                <div className="text-[11.5px] text-amber-900">
+                  Last called by <span className="font-semibold">{callRecord.lastCallerName || callRecord.history?.[0]?.callerName || 'Staff'}</span> on <span className="font-semibold">{formatCallTime(callRecord.lastCalledAt)}</span>
+                </div>
+                <div className="flex items-center gap-2 pt-0.5 flex-wrap">
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono border font-semibold ${latestStatusDef?.badge || 'bg-amber-100 text-amber-800 border-amber-300'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${latestStatusDef?.indicator || 'bg-amber-500'}`} />
+                    <span>{latestStatusDef?.label || callRecord.lastStatus}</span>
+                  </span>
+                  {callRecord.leadNumber && (
+                    <span className="text-[10px] font-mono text-amber-800">
+                      Lead #{callRecord.leadNumber}
+                    </span>
+                  )}
+                </div>
+                {callRecord.lastRemark && callRecord.lastRemark !== 'No remarks entered.' && (
+                  <div className="text-[11px] bg-white/90 p-2 rounded-lg border border-amber-200/80 text-slate-800 italic mt-1 font-mono">
+                    "{callRecord.lastRemark}"
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Quick Contact Actions Bar */}
             <div className="grid grid-cols-3 gap-2">
               {participant.phone && participant.phone !== 'N/A' && (
                 <Button
-                  variant="sky"
+                  variant={callCount > 0 ? "warning" : "default"}
                   size="sm"
                   onClick={() => onTriggerCall && onTriggerCall(participant)}
-                  className="font-semibold shadow-xs"
-                  title="Call via phone and log remarks"
+                  className={`font-semibold shadow-xs ${
+                    callCount > 0 
+                      ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300' 
+                      : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+                  }`}
+                  title={callCount > 0 ? `Already called ${callCount} time(s). Click to log follow-up call.` : 'Call via phone and log remarks'}
                 >
-                  <PhoneCall className="w-3.5 h-3.5 mr-1" />
-                  <span>Call ({callCount})</span>
+                  <PhoneCall className={`w-3.5 h-3.5 mr-1 ${callCount > 0 ? 'text-amber-600' : 'text-white'}`} />
+                  <span>{callCount > 0 ? `Re-Call (${callCount})` : 'Call Lead'}</span>
                 </Button>
               )}
 
