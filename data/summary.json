@@ -1,14 +1,14 @@
 {
-  "last_synced_at": "2026-10-07T23:57:54.346827+00:00",
-  "token_expires_at": "2026-10-08T23:57:55.366213+00:00",
+  "last_synced_at": "2026-10-08T04:57:36.448064+00:00",
+  "token_expires_at": "2026-10-09T04:57:37.346091+00:00",
   "auth_mode": "automated_login",
-  "total_unstop_registrations": 5075,
-  "total_paid_registrations": 4431,
-  "total_incomplete_registrations": 644,
+  "total_unstop_registrations": 5114,
+  "total_paid_registrations": 4471,
+  "total_incomplete_registrations": 643,
   "total_amount_collected": 2396.0,
-  "total_colleges": 300,
+  "total_colleges": 302,
   "total_events_scanned": 68,
-  "events_with_paid": 65,
+  "events_with_paid": 66,
   "events_list": [
     {
       "id": 1767134,
@@ -23,8 +23,8 @@
       "title": "Fun Challenge",
       "type": "competitions",
       "total_registrations": 5,
-      "paid_registrations": 0,
-      "incomplete_registrations": 5
+      "paid_registrations": 1,
+      "incomplete_registrations": 4
     },
     {
       "id": 1765735,
@@ -54,8 +54,8 @@
       "id": 1765475,
       "title": "Honey Bee Processing",
       "type": "workshops",
-      "total_registrations": 42,
-      "paid_registrations": 42,
+      "total_registrations": 50,
+      "paid_registrations": 50,
       "incomplete_registrations": 0
     },
     {
@@ -70,8 +70,8 @@
       "id": 1744818,
       "title": "Technical Quiz Competition",
       "type": "competitions",
-      "total_registrations": 88,
-      "paid_registrations": 88,
+      "total_registrations": 89,
+      "paid_registrations": 89,
       "incomplete_registrations": 0
     },
     {
@@ -86,8 +86,8 @@
       "id": 1744782,
       "title": "Quiz Nova",
       "type": "quizzes",
-      "total_registrations": 193,
-      "paid_registrations": 193,
+      "total_registrations": 196,
+      "paid_registrations": 196,
       "incomplete_registrations": 0
     },
     {
@@ -102,24 +102,24 @@
       "id": 1744779,
       "title": "Tech4Earth",
       "type": "competitions",
-      "total_registrations": 213,
-      "paid_registrations": 213,
+      "total_registrations": 214,
+      "paid_registrations": 214,
       "incomplete_registrations": 0
     },
     {
       "id": 1744778,
       "title": "Foodprint",
       "type": "competitions",
-      "total_registrations": 126,
-      "paid_registrations": 126,
+      "total_registrations": 129,
+      "paid_registrations": 129,
       "incomplete_registrations": 0
     },
     {
       "id": 1744777,
       "title": "Clue Craze",
       "type": "competitions",
-      "total_registrations": 122,
-      "paid_registrations": 122,
+      "total_registrations": 123,
+      "paid_registrations": 123,
       "incomplete_registrations": 0
     },
     {
@@ -142,8 +142,8 @@
       "id": 1744773,
       "title": "Cognitive Challenges",
       "type": "competitions",
-      "total_registrations": 97,
-      "paid_registrations": 97,
+      "total_registrations": 98,
+      "paid_registrations": 98,
       "incomplete_registrations": 0
     },
     {
@@ -198,16 +198,16 @@
       "id": 1744757,
       "title": "Chess",
       "type": "competitions",
-      "total_registrations": 117,
-      "paid_registrations": 117,
+      "total_registrations": 118,
+      "paid_registrations": 118,
       "incomplete_registrations": 0
     },
     {
       "id": 1744238,
       "title": "Pitchverse",
       "type": "competitions",
-      "total_registrations": 70,
-      "paid_registrations": 70,
+      "total_registrations": 71,
+      "paid_registrations": 71,
       "incomplete_registrations": 0
     },
     {
@@ -238,8 +238,8 @@
       "id": 1744230,
       "title": "Circuit Craft",
       "type": "competitions",
-      "total_registrations": 64,
-      "paid_registrations": 64,
+      "total_registrations": 65,
+      "paid_registrations": 65,
       "incomplete_registrations": 0
     },
     {
@@ -254,9 +254,9 @@
       "id": 1744228,
       "title": "Pixel Wizard",
       "type": "competitions",
-      "total_registrations": 83,
-      "paid_registrations": 19,
-      "incomplete_registrations": 64
+      "total_registrations": 85,
+      "paid_registrations": 20,
+      "incomplete_registrations": 65
     },
     {
       "id": 1744227,
@@ -270,8 +270,8 @@
       "id": 1744224,
       "title": "The Neural Nexus",
       "type": "competitions",
-      "total_registrations": 102,
-      "paid_registrations": 102,
+      "total_registrations": 103,
+      "paid_registrations": 103,
       "incomplete_registrations": 0
     },
     {
@@ -294,8 +294,8 @@
       "id": 1744220,
       "title": "Debug and Deploy",
       "type": "competitions",
-      "total_registrations": 168,
-      "paid_registrations": 168,
+      "total_registrations": 170,
+      "paid_registrations": 170,
       "incomplete_registrations": 0
     },
     {
@@ -318,16 +318,16 @@
       "id": 1744216,
       "title": "Ghost Code",
       "type": "competitions",
-      "total_registrations": 110,
-      "paid_registrations": 47,
-      "incomplete_registrations": 63
+      "total_registrations": 111,
+      "paid_registrations": 49,
+      "incomplete_registrations": 62
     },
     {
       "id": 1744215,
       "title": "Heuristic Havoc",
       "type": "competitions",
-      "total_registrations": 81,
-      "paid_registrations": 81,
+      "total_registrations": 82,
+      "paid_registrations": 82,
       "incomplete_registrations": 0
     },
     {
@@ -502,8 +502,8 @@
       "id": 1744154,
       "title": "Robowar",
       "type": "competitions",
-      "total_registrations": 50,
-      "paid_registrations": 50,
+      "total_registrations": 51,
+      "paid_registrations": 51,
       "incomplete_registrations": 0
     },
     {
@@ -518,8 +518,8 @@
       "id": 1744148,
       "title": "BGMI",
       "type": "competitions",
-      "total_registrations": 94,
-      "paid_registrations": 94,
+      "total_registrations": 95,
+      "paid_registrations": 95,
       "incomplete_registrations": 0
     },
     {
@@ -534,8 +534,8 @@
       "id": 1743774,
       "title": "Kritrim - Model Exhibition",
       "type": "competitions",
-      "total_registrations": 60,
-      "paid_registrations": 60,
+      "total_registrations": 61,
+      "paid_registrations": 61,
       "incomplete_registrations": 0
     },
     {
@@ -550,8 +550,8 @@
       "id": 1742408,
       "title": "Logic Flow",
       "type": "hackathons",
-      "total_registrations": 49,
-      "paid_registrations": 49,
+      "total_registrations": 57,
+      "paid_registrations": 57,
       "incomplete_registrations": 0
     }
   ],
