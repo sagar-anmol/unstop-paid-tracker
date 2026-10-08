@@ -32,8 +32,7 @@ import { Input } from "@/components/ui/input";
 import { 
   isParticipantRefunded, 
   isParticipantPaid, 
-  isParticipantUnpaid, 
-  getPaymentBadgeConfig 
+  isParticipantUnpaid 
 } from '../utils/paymentUtils';
 
 export default function DataTable({ 
@@ -501,32 +500,6 @@ export default function DataTable({
             </button>
           </div>
 
-          {/* Payment Filter Segmented Tray */}
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 border border-zinc-200/80 overflow-x-auto scrollbar-none">
-            {[
-              { id: 'all', label: 'All', count: paymentCounts.all, countClass: 'text-zinc-500' },
-              { id: 'refunded', label: 'Refunded', count: paymentCounts.refunded, countClass: 'text-purple-700 bg-purple-50 font-semibold px-1 rounded' },
-              { id: 'unpaid', label: 'Unpaid', count: paymentCounts.unpaid, countClass: 'text-amber-800 bg-amber-50 font-semibold px-1 rounded' },
-              ...(paymentCounts.paid > 0 ? [{ id: 'paid', label: 'Paid', count: paymentCounts.paid, countClass: 'text-emerald-700 font-semibold px-1 rounded' }] : [])
-            ].map(p => {
-              const isActive = selectedPayment === p.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => { setSelectedPayment(p.id); setCurrentPage(1); }}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    isActive 
-                      ? 'bg-white text-zinc-900 shadow-xs font-semibold' 
-                      : 'text-zinc-600 hover:text-zinc-900'
-                  }`}
-                >
-                  <span>{p.label}</span>
-                  <span className={`text-[10px] font-mono ${p.countClass}`}>({p.count})</span>
-                </button>
-              );
-            })}
-          </div>
-
           {/* Quick Calling Desk Filter Tray (Duplicate Call Prevention) */}
           <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 border border-zinc-200/80 overflow-x-auto scrollbar-none" title="Quick Calling Desk Filters">
             {[
@@ -685,14 +658,13 @@ export default function DataTable({
               <th className="py-2.5 px-3 min-w-[180px]">Institution & Course</th>
               <th className="py-2.5 px-3 min-w-[180px]">Competition & Domain</th>
               <th className="py-2.5 px-3 min-w-[130px]">Team Roster</th>
-              <th className="py-2.5 px-3 min-w-[120px] text-right">Payment Status</th>
               <th className="py-2.5 px-3 w-12 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 bg-white">
             {pageItems.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-16 text-center text-slate-500">
+                <td colSpan={7} className="py-16 text-center text-slate-500">
                   <div className="max-w-xs mx-auto">
                     <Filter className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                     <p className="font-semibold text-sm text-slate-800">No participants found</p>
@@ -1009,54 +981,6 @@ export default function DataTable({
                       )}
                     </td>
 
-                    {/* Payment Status Pill */}
-                    <td className="py-3 px-3 text-right">
-                      {isGroupedMode && p.eventsCount > 1 ? (
-                        <div className="space-y-0.5 text-right">
-                          {p.refundedEventsCount > 0 ? (
-                            <div>
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold text-purple-700 bg-purple-50 border border-purple-200">
-                                <RotateCcw className="w-3 h-3 text-purple-600" />
-                                <span>{p.totalAmountRefunded > 0 ? `Refunded ₹${p.totalAmountRefunded.toLocaleString('en-IN')}` : 'Refunded'}</span>
-                              </span>
-                              <div className="text-[10px] font-mono text-purple-600 mt-0.5">
-                                {p.refundedEventsCount} refunded • {p.unpaidEventsCount} unpaid
-                              </div>
-                            </div>
-                          ) : p.paidEventsCount > 0 ? (
-                            <div>
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200">
-                                <Check className="w-3 h-3 text-emerald-600" />
-                                <span>{p.totalAmountPaid > 0 ? `Paid ₹${p.totalAmountPaid}` : 'Paid'}</span>
-                              </span>
-                            </div>
-                          ) : (
-                            <div>
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-mono font-semibold text-amber-800 bg-amber-50 border border-amber-200" title="Entry fee pending on techfest26.in">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                <span>Unpaid</span>
-                              </span>
-                              <div className="text-[10px] font-mono text-amber-700 mt-0.5">{p.eventsCount} events unpaid</div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div>
-                          {(() => {
-                            const badge = getPaymentBadgeConfig(p);
-                            return (
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold border ${badge.className}`}>
-                                {badge.type === 'REFUNDED' && <RotateCcw className="w-3 h-3 text-purple-600" />}
-                                {badge.type === 'UNPAID' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
-                                {badge.type === 'PAID' && <Check className="w-3 h-3 text-emerald-600" />}
-                                <span>{badge.label}</span>
-                              </span>
-                            );
-                          })()}
-                        </div>
-                      )}
-                    </td>
-
                     {/* View Action */}
                     <td className="py-3 px-3 text-center">
                       <button
@@ -1120,31 +1044,6 @@ export default function DataTable({
                       <div className="text-[11px] font-mono text-slate-500 truncate">{p.email || 'N/A'}</div>
                     </div>
                   </div>
-
-                  {isGroupedMode && p.eventsCount > 1 ? (
-                    p.refundedEventsCount > 0 ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10.5px] font-mono font-semibold text-purple-700 bg-purple-50 border border-purple-200 shrink-0">
-                        {p.totalAmountRefunded > 0 ? `Refunded ₹${p.totalAmountRefunded}` : 'Refunded'}
-                      </span>
-                    ) : p.paidEventsCount > 0 ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10.5px] font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 shrink-0">
-                        Paid
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold text-amber-800 bg-amber-50 border border-amber-200 shrink-0">
-                        Unpaid ({p.eventsCount})
-                      </span>
-                    )
-                  ) : (
-                    (() => {
-                      const badge = getPaymentBadgeConfig(p);
-                      return (
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border shrink-0 ${badge.className}`}>
-                          {badge.pillText}
-                        </span>
-                      );
-                    })()
-                  )}
                 </div>
 
                 {isGroupedMode && p.events && p.events.length > 1 ? (
