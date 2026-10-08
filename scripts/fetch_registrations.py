@@ -262,14 +262,32 @@ def normalize_record(record: dict, index: int, event_info: dict) -> dict:
     regn_id = record.get("regn_id") or str(record.get("id")) or f"REG-{index:04d}"
     registered_at = record.get("last_seen") or record.get("created_at") or datetime.now(timezone.utc).isoformat()
     
-    is_paid = is_registration_paid(record)
-    reg_status_raw = str(record.get("registrationStatus") or record.get("regi_status") or "").strip()
-    if is_paid:
-        status_label = "Complete Registration" if not reg_status_raw or "not paid" in reg_status_raw.lower() else reg_status_raw
-        payment_status = "PAID"
+    REFUNDED_LEAD_IDS = {
+        '1744221-UU03F60T', '1744216-U30ZI9O2', '1744216-UR6ZD046', 
+        '1744207-U9BWU939', '1744174-U4X9FV67', '1744167-U7Y62Q8V', 
+        '1743774-UD66PC39'
+    }
+    REFUNDED_INTERNAL_IDS = {
+        59665627, 59581506, 59581333, 58445169, 59821533, 59998950, 59922507
+    }
+
+    # All Unstop fees were refunded back to candidates.
+    # No participant should be marked as PAID from Unstop.
+    is_refunded = (
+        regn_id in REFUNDED_LEAD_IDS or 
+        record.get("id") in REFUNDED_INTERNAL_IDS or 
+        amount > 0 or 
+        record.get("is_refunded") is True
+    )
+
+    if is_refunded:
+        is_paid = False
+        payment_status = "REFUNDED"
+        status_label = "Refunded (Unstop)"
     else:
-        status_label = "Registraition fee not paid" if not reg_status_raw else reg_status_raw
-        payment_status = "INCOMPLETE"
+        is_paid = False
+        payment_status = "UNPAID"
+        status_label = "Payment Pending (techfest26.in)"
 
     return {
         "id": regn_id,
@@ -497,31 +515,36 @@ def main():
 
     # Compute summary
     total_count = len(all_participants)
-    total_paid_count = len(all_paid_participants)
-    total_incomplete_count = total_count - total_paid_count
-    total_revenue = sum(p.get("amount", 0) for p in all_paid_participants)
+    refunded_participants = [p for p in all_participants if p.get("is_refunded")]
+    total_refunded_count = len(refunded_participants)
+    total_paid_count = 0  # Payments transitioned to techfest26.in
+    total_unpaid_count = total_count - total_refunded_count
+    total_refunded_amount = sum(p.get("amount", 0) for p in refunded_participants)
     colleges = list({p.get("college") for p in all_participants if p.get("college") and p.get("college") != "N/A"})
-    active_events = [e for e in events_summary if e.get("paid_registrations", 0) > 0]
+    active_events = [e for e in events_summary if e.get("total_registrations", 0) > 0]
 
     summary = {
         "last_synced_at": sync_time,
         "token_expires_at": token_expiry,
         "auth_mode": "automated_login" if (UNSTOP_EMAIL and UNSTOP_PASSWORD) else "static_token",
         "total_unstop_registrations": total_count,
-        "total_paid_registrations": total_paid_count,
-        "total_incomplete_registrations": total_incomplete_count,
-        "total_amount_collected": round(total_revenue, 2),
+        "total_paid_registrations": 0,
+        "total_refunded_registrations": total_refunded_count,
+        "total_unpaid_registrations": total_unpaid_count,
+        "total_amount_collected": 0.0,
+        "total_amount_refunded": round(total_refunded_amount, 2),
         "total_colleges": len(colleges),
         "total_events_scanned": len(events_summary),
-        "events_with_paid": len(active_events),
+        "events_with_paid": 0,
         "events_list": events_summary,
-        "status": "HEALTHY"
+        "status": "HEALTHY",
+        "note": "Scheduled sync stopped. All Unstop payments refunded. Payments moving to techfest26.in."
     }
 
     # Save outputs
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(all_paid_participants, f, indent=2, ensure_ascii=False)
-    logging.info(f"Saved {total_paid_count} paid records to {OUTPUT_FILE}")
+        json.dump(refunded_participants, f, indent=2, ensure_ascii=False)
+    logging.info(f"Saved {total_refunded_count} refunded records to {OUTPUT_FILE}")
 
     with open(SUMMARY_FILE, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)

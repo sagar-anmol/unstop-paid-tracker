@@ -1,9 +1,11 @@
-name: Sync Unstop Paid Registrations
+name: Sync Unstop Paid Registrations (Manual Only - Auto-Sync Stopped)
+
+# CRON AUTO-SYNC STOPPED:
+# Automatic scheduled sync has been disabled per user request.
+# Unstop payments have been refunded and registrations are transitioning to techfest26.in.
+# To prevent Unstop from repeatedly marking participants as 'paid', automatic cron is disabled.
 
 on:
-  schedule:
-    # Runs every 2 hours
-    - cron: '0 */2 * * *'
   workflow_dispatch:
     inputs:
       unstop_token:
@@ -56,6 +58,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes in registration data."
           else
-            git commit -m "chore(data): auto-sync unstop paid registrations [skip ci]"
+            git commit -m "chore(data): manual sync unstop registrations [skip ci]"
             git push
           fi
