@@ -1,12 +1,12 @@
 {
-  "last_synced_at": "2026-10-07T18:16:22.150140+00:00",
-  "token_expires_at": "2026-10-08T18:16:23.028001+00:00",
+  "last_synced_at": "2026-10-07T23:57:54.346827+00:00",
+  "token_expires_at": "2026-10-08T23:57:55.366213+00:00",
   "auth_mode": "automated_login",
-  "total_unstop_registrations": 5036,
-  "total_paid_registrations": 4392,
+  "total_unstop_registrations": 5075,
+  "total_paid_registrations": 4431,
   "total_incomplete_registrations": 644,
   "total_amount_collected": 2396.0,
-  "total_colleges": 295,
+  "total_colleges": 300,
   "total_events_scanned": 68,
   "events_with_paid": 65,
   "events_list": [
@@ -54,8 +54,8 @@
       "id": 1765475,
       "title": "Honey Bee Processing",
       "type": "workshops",
-      "total_registrations": 33,
-      "paid_registrations": 33,
+      "total_registrations": 42,
+      "paid_registrations": 42,
       "incomplete_registrations": 0
     },
     {
@@ -63,8 +63,8 @@
       "title": "The Aqua-Epoch",
       "type": "competitions",
       "total_registrations": 81,
-      "paid_registrations": 5,
-      "incomplete_registrations": 76
+      "paid_registrations": 6,
+      "incomplete_registrations": 75
     },
     {
       "id": 1744818,
@@ -86,8 +86,8 @@
       "id": 1744782,
       "title": "Quiz Nova",
       "type": "quizzes",
-      "total_registrations": 192,
-      "paid_registrations": 192,
+      "total_registrations": 193,
+      "paid_registrations": 193,
       "incomplete_registrations": 0
     },
     {
@@ -126,8 +126,8 @@
       "id": 1744776,
       "title": "Food Forensics",
       "type": "competitions",
-      "total_registrations": 186,
-      "paid_registrations": 186,
+      "total_registrations": 187,
+      "paid_registrations": 187,
       "incomplete_registrations": 0
     },
     {
@@ -142,8 +142,8 @@
       "id": 1744773,
       "title": "Cognitive Challenges",
       "type": "competitions",
-      "total_registrations": 95,
-      "paid_registrations": 95,
+      "total_registrations": 97,
+      "paid_registrations": 97,
       "incomplete_registrations": 0
     },
     {
@@ -254,9 +254,9 @@
       "id": 1744228,
       "title": "Pixel Wizard",
       "type": "competitions",
-      "total_registrations": 82,
+      "total_registrations": 83,
       "paid_registrations": 19,
-      "incomplete_registrations": 63
+      "incomplete_registrations": 64
     },
     {
       "id": 1744227,
@@ -294,16 +294,16 @@
       "id": 1744220,
       "title": "Debug and Deploy",
       "type": "competitions",
-      "total_registrations": 165,
-      "paid_registrations": 165,
+      "total_registrations": 168,
+      "paid_registrations": 168,
       "incomplete_registrations": 0
     },
     {
       "id": 1744219,
       "title": "Aqua Clean",
       "type": "competitions",
-      "total_registrations": 84,
-      "paid_registrations": 84,
+      "total_registrations": 85,
+      "paid_registrations": 85,
       "incomplete_registrations": 0
     },
     {
@@ -318,8 +318,8 @@
       "id": 1744216,
       "title": "Ghost Code",
       "type": "competitions",
-      "total_registrations": 109,
-      "paid_registrations": 46,
+      "total_registrations": 110,
+      "paid_registrations": 47,
       "incomplete_registrations": 63
     },
     {
@@ -350,8 +350,8 @@
       "id": 1744211,
       "title": "Mechnovate",
       "type": "competitions",
-      "total_registrations": 50,
-      "paid_registrations": 50,
+      "total_registrations": 52,
+      "paid_registrations": 52,
       "incomplete_registrations": 0
     },
     {
@@ -382,8 +382,8 @@
       "id": 1744205,
       "title": "Jam Session",
       "type": "cultural",
-      "total_registrations": 61,
-      "paid_registrations": 61,
+      "total_registrations": 68,
+      "paid_registrations": 68,
       "incomplete_registrations": 0
     },
     {
@@ -399,8 +399,8 @@
       "title": "Truss Load",
       "type": "competitions",
       "total_registrations": 63,
-      "paid_registrations": 9,
-      "incomplete_registrations": 54
+      "paid_registrations": 10,
+      "incomplete_registrations": 53
     },
     {
       "id": 1744178,
@@ -422,8 +422,8 @@
       "id": 1744174,
       "title": "Soldering Speedrun",
       "type": "competitions",
-      "total_registrations": 70,
-      "paid_registrations": 70,
+      "total_registrations": 72,
+      "paid_registrations": 72,
       "incomplete_registrations": 0
     },
     {
@@ -446,9 +446,9 @@
       "id": 1744169,
       "title": "RC Car",
       "type": "competitions",
-      "total_registrations": 51,
+      "total_registrations": 52,
       "paid_registrations": 4,
-      "incomplete_registrations": 47
+      "incomplete_registrations": 48
     },
     {
       "id": 1744167,
@@ -526,8 +526,8 @@
       "id": 1744147,
       "title": "Free Fire",
       "type": "competitions",
-      "total_registrations": 153,
-      "paid_registrations": 153,
+      "total_registrations": 154,
+      "paid_registrations": 154,
       "incomplete_registrations": 0
     },
     {
@@ -542,16 +542,16 @@
       "id": 1742433,
       "title": "Jugaad",
       "type": "hackathons",
-      "total_registrations": 67,
-      "paid_registrations": 67,
+      "total_registrations": 69,
+      "paid_registrations": 69,
       "incomplete_registrations": 0
     },
     {
       "id": 1742408,
       "title": "Logic Flow",
       "type": "hackathons",
-      "total_registrations": 44,
-      "paid_registrations": 44,
+      "total_registrations": 49,
+      "paid_registrations": 49,
       "incomplete_registrations": 0
     }
   ],
