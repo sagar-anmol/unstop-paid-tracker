@@ -15,7 +15,8 @@ import {
   Copy,
   Calendar,
   CreditCard,
-  AlertTriangle
+  AlertTriangle,
+  XCircle
 } from 'lucide-react';
 import {
   Dialog,
@@ -30,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CALL_STATUSES, getParticipantCallRecord, formatCallTime } from '../utils/callStore';
 import { getDeviceInfo, setCustomDeviceName, getCustomDeviceName } from '../utils/device';
+import { isParticipantCancelled } from '../utils/paymentUtils';
 
 export default function CallRemarkModal({ 
   isOpen, 
@@ -51,24 +53,47 @@ export default function CallRemarkModal({
   const [isEditingStation, setIsEditingStation] = useState(false);
   const [stationName, setStationName] = useState(() => getCustomDeviceName());
 
+  // Cancellation win-back fields, only meaningful for a cancelled participant
+  const [cancelReason, setCancelReason] = useState('');
+  const [revertOutcome, setRevertOutcome] = useState('');
+
   const existingRecord = participant ? getParticipantCallRecord(participant) : null;
   const nextCallNum = (existingRecord?.callCount || 0) + 1;
 
+  const isCancelledParticipant = participant ? isParticipantCancelled(participant) : false;
+  const wasReverted = participant?.cancel_reverted === true;
+
+  const CANCEL_REASONS = [
+    { value: 'FEE_TOO_HIGH', label: 'Fee too high' },
+    { value: 'DATE_CLASH', label: 'Clash with exams or another event' },
+    { value: 'TEAM_DISSOLVED', label: 'Team could not be formed' },
+    { value: 'NOT_INTERESTED', label: 'Not interested any more' },
+    { value: 'OTHER_FEST', label: 'Joined another fest' },
+    { value: 'DUPLICATE', label: 'Duplicate registration' },
+    { value: 'TECHNICAL_ISSUE', label: 'Technical or payment issue' },
+    { value: 'UNSTOP_ISSUES', label: 'Trouble with the Unstop platform' },
+    { value: 'MOVED_TO_TECHFEST26', label: 'Moving to techfest26.in' },
+    { value: 'OTHER', label: 'Other' }
+  ];
+
+  // Reset the form each time a new participant is dialled.
   useEffect(() => {
-    if (participant) {
-      setRemark('');
-      setSelectedStatus('');
-      setUtrNumber(existingRecord?.utrNumber || '');
-      setPaymentMode(existingRecord?.paymentMode || 'UPI');
-      setAmountPaid(String(existingRecord?.amountPaid || '199'));
-      setShowQrCode(false);
-      setCopiedUpi(false);
-      setHasError(false);
-      setLeadNumber(existingRecord?.leadNumber || participant.phone || '');
-      setDeviceInfo(getDeviceInfo());
-      setStationName(getCustomDeviceName());
-      setIsEditingStation(false);
-    }
+    if (!participant) return;
+    const record = getParticipantCallRecord(participant);
+    setRemark('');
+    setSelectedStatus('');
+    setUtrNumber(record?.utrNumber || '');
+    setPaymentMode(record?.paymentMode || 'UPI');
+    setAmountPaid(String(record?.amountPaid || '199'));
+    setShowQrCode(false);
+    setCopiedUpi(false);
+    setHasError(false);
+    setLeadNumber(record?.leadNumber || participant.phone || '');
+    setDeviceInfo(getDeviceInfo());
+    setStationName(getCustomDeviceName());
+    setIsEditingStation(false);
+    setCancelReason('');
+    setRevertOutcome('');
   }, [participant]);
 
   const handleSaveStation = (e) => {
@@ -87,17 +112,46 @@ export default function CallRemarkModal({
       return;
     }
 
+    // A cancellation call must record why they left and what happened next
+    if (isCancelledParticipant && !cancelReason) {
+      setHasError(true);
+      return;
+    }
+    if (isCancelledParticipant && !revertOutcome) {
+      setHasError(true);
+      return;
+    }
+
+    const reasonLabel = CANCEL_REASONS.find(r => r.value === cancelReason)?.label || '';
+    const outcomeLabel = revertOutcome === 'REVERT_WON'
+      ? 'Confirmed they re-registered'
+      : revertOutcome === 'REVERT_PENDING'
+        ? 'Agreed to re-register; awaiting confirmation'
+        : 'Still cancelled / declined to return';
+
     onSubmit({
       participant: {
         ...participant,
         utrNumber: utrNumber.trim(),
         paymentMode,
-        amountPaid: Number(amountPaid) || 199
+        amountPaid: Number(amountPaid) || 199,
+        is_cancelled: isCancelledParticipant,
+        cancel_reason: reasonLabel,
+        cancel_reverted: wasReverted || revertOutcome === 'REVERT_WON'
       },
       callerUser: currentUser,
-      remark: remark.trim() || (selectedStatus === 'PAYMENT_CLAIMED' ? 'Payment completed and confirmed.' : 'Call completed.'),
+      remark: (
+        remark.trim() ||
+        (selectedStatus === 'PAYMENT_CLAIMED' ? 'Payment completed and confirmed.' : 'Call completed.')
+      ) + (
+        isCancelledParticipant
+          ? ` | Cancellation reason: ${reasonLabel}. Win-back: ${outcomeLabel}.`
+          : ''
+      ),
       leadNumber: leadNumber.trim(),
-      status: selectedStatus
+      status: selectedStatus,
+      cancelReason: reasonLabel,
+      revertOutcome
     });
     onClose();
   };
@@ -168,6 +222,76 @@ export default function CallRemarkModal({
             <span>Redial</span>
           </Button>
         </div>
+
+        {/* Cancellation win-back panel */}
+        {isCancelledParticipant && (
+          <div className="mx-5 mt-3 p-3.5 rounded-xl bg-rose-50 border border-rose-300 space-y-3">
+            <div className="flex items-center gap-2">
+              <XCircle className="w-4 h-4 text-rose-600" />
+              <p className="text-xs font-semibold text-rose-900">Registration cancelled — win-back attempt</p>
+              {wasReverted && (
+                <Badge variant="outline" className="text-[10px] font-mono text-emerald-700 border-emerald-300 bg-emerald-50">
+                  previously won back
+                </Badge>
+              )}
+            </div>
+
+            <p className="text-[11px] text-rose-800/90 leading-relaxed">
+                Ask why they cancelled, then confirm whether they re-registered on
+                techfest26.in with the same email. This row turns green automatically once that
+                email appears in a registration created after the cancellation — you do not need to
+                tell the system yourself.
+              </p>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-rose-900 mb-1">
+                Why did they cancel? <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={cancelReason}
+                onChange={(e) => { setCancelReason(e.target.value); setHasError(false); }}
+                className="w-full bg-white border border-rose-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 outline-none focus:border-rose-500"
+              >
+                <option value="">Select a reason...</option>
+                {CANCEL_REASONS.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-rose-900 mb-1">
+                Did they re-register? <span className="text-rose-500">*</span>
+              </label>
+              <div className="space-y-1.5">
+                {[
+                  { value: 'REVERT_WON', label: 'Yes, already re-registered on techfest26.in' },
+                  { value: 'REVERT_PENDING', label: 'Promised to re-register, not done yet' },
+                  { value: 'STILL_CANCELLED', label: 'No, still cancelled' }
+                ].map(opt => (
+                  <label key={opt.value} className="flex items-center gap-2 text-xs text-rose-900 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="revertOutcome"
+                      value={opt.value}
+                      checked={revertOutcome === opt.value}
+                      onChange={(e) => { setRevertOutcome(e.target.value); setHasError(false); }}
+                      className="accent-rose-600"
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {hasError && !cancelReason && (
+              <p className="text-[11px] text-rose-700 font-medium">Select a cancellation reason to continue.</p>
+            )}
+            {hasError && cancelReason && !revertOutcome && (
+              <p className="text-[11px] text-rose-700 font-medium">Tell us whether they re-registered.</p>
+            )}
+          </div>
+        )}
 
         {/* Warning if already contacted */}
         {existingRecord && existingRecord.callCount > 0 && (
@@ -365,7 +489,7 @@ export default function CallRemarkModal({
               })}
             </div>
 
-            {hasError && (
+            {hasError && !isCancelledParticipant && (
               <p className="flex items-center gap-1 text-[11px] text-rose-600 mt-2 font-mono">
                 <AlertCircle className="w-3.5 h-3.5" />
                 Please select a call status before saving.
@@ -448,7 +572,7 @@ export default function CallRemarkModal({
             <Button
               type="submit"
               size="sm"
-              disabled={!selectedStatus}
+              disabled={!selectedStatus || (isCancelledParticipant && (!cancelReason || !revertOutcome))}
               className={
                 selectedStatus === 'PAYMENT_CLAIMED'
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs font-semibold'
@@ -457,7 +581,12 @@ export default function CallRemarkModal({
                   : ''
               }
             >
-              {selectedStatus === 'PAYMENT_CLAIMED' ? (
+              {isCancelledParticipant ? (
+                <>
+                  <XCircle className="w-4 h-4 mr-1 text-white" />
+                  <span>Save Win-back Outcome</span>
+                </>
+              ) : selectedStatus === 'PAYMENT_CLAIMED' ? (
                 <>
                   <CheckCircle2 className="w-4 h-4 mr-1 text-white" />
                   <span>Confirm Payment Completed</span>

@@ -150,8 +150,18 @@ export default function AuditLogsModal({ isOpen, onClose }) {
               className="w-full bg-white border border-slate-200 focus:border-slate-900 rounded-xl px-3 py-1.5 text-xs text-slate-900 outline-none shadow-xs"
             >
               <option value="ALL">All Logged Actions</option>
-              <option value="LOG_CALL">Call Logs (LOG_CALL)</option>
+              <option value="LOGIN_SUCCESS">Sign-ins</option>
+              <option value="LOGOUT">Sign-outs</option>
+              <option value="LOG_CALL">Call Logs</option>
               <option value="VERIFY_PAYMENT">Payment Verifications</option>
+              <option value="CLAIM_RESOLVED">CI Claim Reconciliation</option>
+              <option value="CANCELLATION_CONTACTED">Cancellation Win-back</option>
+              <option value="CANCELLATION_REVERTED">Won Back</option>
+              <option value="USER_CREATED">Team Accounts Added</option>
+              <option value="USER_DEACTIVATED">Team Accounts Deactivated</option>
+              <option value="PASSWORD_CHANGE">Admin Password Resets</option>
+              <option value="CSV_EXPORT">CSV Exports</option>
+              <option value="PARTICIPANT_OVERRIDE">Record Overrides</option>
             </select>
           </div>
         </div>

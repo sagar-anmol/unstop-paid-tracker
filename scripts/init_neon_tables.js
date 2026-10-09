@@ -1,11 +1,18 @@
 import { neon } from '@neondatabase/serverless';
 
-const databaseUrl = 'postgresql://neondb_owner:npg_Sr9XpW5sKcPU@ep-late-shadow-awcbgs14-pooler.c-12.us-east-1.aws.neon.tech/neondb?sslmode=require';
+// Read the connection string from the environment. Never commit a credential:
+// this script runs from GitHub Actions (secret) or a local shell export.
+const databaseUrl = process.env.NEON_DATABASE_URL || process.env.VITE_NEON_DATABASE_URL || '';
+
+if (!databaseUrl) {
+  console.error('Missing NEON_DATABASE_URL. Export it before running this script.');
+  process.exit(1);
+}
 
 async function initTables() {
   const sql = neon(databaseUrl);
 
-  console.log('Creating tables in Neon PostgreSQL...');
+  console.log('Creating/verifying tables in Neon PostgreSQL...');
 
   await sql`
     CREATE TABLE IF NOT EXISTS call_logs (
@@ -22,11 +29,11 @@ async function initTables() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
-  console.log('✓ call_logs table verified');
+  console.log('OK call_logs');
 
   await sql`CREATE INDEX IF NOT EXISTS idx_call_logs_participant ON call_logs(participant_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_call_logs_timestamp ON call_logs(timestamp DESC)`;
-  console.log('✓ call_logs indexes created');
+  console.log('OK call_logs indexes');
 
   await sql`
     CREATE TABLE IF NOT EXISTS payment_verifications (
@@ -38,7 +45,7 @@ async function initTables() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
-  console.log('✓ payment_verifications table verified');
+  console.log('OK payment_verifications');
 
   await sql`
     CREATE TABLE IF NOT EXISTS audit_logs (
@@ -56,31 +63,107 @@ async function initTables() {
       details TEXT
     )
   `;
-  console.log('✓ audit_logs table verified');
-
   await sql`CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC)`;
+  console.log('OK audit_logs');
 
+  // ---- Hashed credential storage ----
   await sql`
     CREATE TABLE IF NOT EXISTS custom_passwords (
       username TEXT PRIMARY KEY,
-      password TEXT NOT NULL,
+      password TEXT,
+      password_hash TEXT,
+      salt TEXT,
+      algo TEXT,
+      must_change BOOLEAN DEFAULT FALSE,
       updated_by TEXT,
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
-  console.log('✓ custom_passwords table verified');
+  console.log('OK custom_passwords (hashed columns added)');
 
-  // Verify all tables by querying information_schema
-  const tables = await sql`
-    SELECT table_name 
-    FROM information_schema.tables 
-    WHERE table_schema = 'public' 
-    ORDER BY table_name;
+  // ---- Device sessions (referenced by the app but never created) ----
+  await sql`
+    CREATE TABLE IF NOT EXISTS device_sessions (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      user_name TEXT,
+      team_name TEXT,
+      role TEXT,
+      device_model TEXT,
+      browser TEXT,
+      os TEXT,
+      device_type TEXT,
+      ip TEXT,
+      location TEXT,
+      full_location TEXT,
+      isp TEXT,
+      login_time TIMESTAMPTZ DEFAULT NOW(),
+      last_active TIMESTAMPTZ DEFAULT NOW(),
+      is_active BOOLEAN DEFAULT TRUE
+    )
   `;
-  console.log('\nVerified Public Tables in Neon Database:');
-  tables.forEach(t => console.log('  ->', t.table_name));
+  await sql`CREATE INDEX IF NOT EXISTS idx_device_sessions_active ON device_sessions(is_active)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_device_sessions_username ON device_sessions(username)`;
+  console.log('OK device_sessions');
 
-  console.log('\nAll Neon database tables successfully initialized!');
+  // ---- Runtime-managed panel users ----
+  await sql`
+    CREATE TABLE IF NOT EXISTS panel_users (
+      username TEXT PRIMARY KEY,
+      display_name TEXT NOT NULL,
+      role TEXT NOT NULL,
+      domain_id TEXT DEFAULT 'ALL',
+      team_name TEXT,
+      email TEXT,
+      phone TEXT,
+      is_active BOOLEAN DEFAULT TRUE,
+      can_verify_payments BOOLEAN DEFAULT FALSE,
+      created_by TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      notes TEXT
+    )
+  `;
+  console.log('OK panel_users');
+
+  // ---- Payment claims: raised in the panel, reconciled by CI ----
+  await sql`
+    CREATE TABLE IF NOT EXISTS payment_claims (
+      claim_id TEXT PRIMARY KEY,
+      participant_id TEXT NOT NULL,
+      email TEXT,
+      participant_name TEXT,
+      claimed_by TEXT NOT NULL,
+      claimed_by_name TEXT,
+      claimed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      state TEXT NOT NULL DEFAULT 'PENDING_RECONCILE',
+      claimed_amount NUMERIC(10,2) DEFAULT 0,
+      claimed_utr TEXT,
+      remark TEXT,
+      resolved_at TIMESTAMPTZ,
+      resolved_by TEXT,
+      api_registration_id TEXT,
+      api_utr TEXT,
+      api_amount NUMERIC(10,2),
+      api_status TEXT,
+      last_checked_at TIMESTAMPTZ,
+      match_note TEXT
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_payment_claims_state ON payment_claims(state)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_payment_claims_email ON payment_claims(LOWER(email))`;
+  console.log('OK payment_claims');
+
+  const tables = await sql`
+    SELECT table_name FROM information_schema.tables
+    WHERE table_schema = 'public' ORDER BY table_name;
+  `;
+  console.log('\nPublic tables present:');
+  tables.forEach(t => console.log('  ->', t.table_name));
+  console.log('\nMigration complete.');
 }
 
-initTables().catch(console.error);
+initTables().catch(err => {
+  console.error('Migration failed:', err.message);
+  process.exit(1);
+});

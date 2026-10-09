@@ -1,0 +1,5 @@
+{
+  "claims": [],
+  "exported_at": null,
+  "note": "Open payment claims exported from Neon by scripts/apply_payment_verdicts.js for evaluation by scripts/reconcile_payments.py."
+}

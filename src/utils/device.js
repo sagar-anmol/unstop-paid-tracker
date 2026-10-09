@@ -425,6 +425,11 @@ export async function fetchCloudLoginSessions() {
  * Record a new login session when a user signs in (like Instagram Login Activity)
  * Syncs synchronously to local storage and asynchronously to Neon PostgreSQL Cloud
  */
+/**
+ * Records a login session. When the same user already has an active session on
+ * this device, it is refreshed instead of creating a duplicate row, so a
+ * re-render or a manual sync does not inflate the session list.
+ */
 export function recordLoginSession(user) {
   if (!user || !user.username) return;
 
@@ -432,8 +437,17 @@ export function recordLoginSession(user) {
   const geo = getNetworkLocationInfo();
   const sessions = getActiveLoginSessions();
 
+  const existing = sessions.find(s => s.username === user.username && s.isCurrentDevice);
+  if (existing) {
+    existing.lastActive = new Date().toISOString();
+    saveDeviceSessionToNeon(existing).catch(err => {
+      console.warn('Failed to refresh session in Neon:', err);
+    });
+    return existing;
+  }
+
   const newSession = {
-    id: 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+    id: 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     username: user.username,
     userName: user.name || user.username,
     teamName: user.teamName || user.department || 'Central Operations',
@@ -450,8 +464,8 @@ export function recordLoginSession(user) {
     isCurrentDevice: true
   };
 
-  // Mark all older sessions as not current
-  const updated = sessions.map(s => ({ ...s, isCurrentDevice: false }));
+  // Mark all older sessions for this user as not current
+  const updated = sessions.map(s => (s.username === user.username ? { ...s, isCurrentDevice: false } : s));
   updated.unshift(newSession);
 
   // Retain up to 25 latest active sessions

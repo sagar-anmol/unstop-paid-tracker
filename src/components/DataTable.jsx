@@ -21,7 +21,8 @@ import {
   ShieldCheck,
   AlertCircle,
   Layers,
-  UserCheck
+  UserCheck,
+  XCircle
 } from 'lucide-react';
 import { getAvatarStyle, getInitials } from '../utils/avatar';
 import { getCallRecords, getParticipantCallRecord, CALL_STATUSES, formatCallTime } from '../utils/callStore';
@@ -32,7 +33,8 @@ import { Input } from "@/components/ui/input";
 import { 
   isParticipantRefunded, 
   isParticipantPaid, 
-  isParticipantUnpaid 
+  isParticipantUnpaid,
+  isParticipantCancelled
 } from '../utils/paymentUtils';
 
 export default function DataTable({ 
@@ -45,10 +47,11 @@ export default function DataTable({
   onSelectEventFilter,
   onSelectParticipant, 
   onTriggerCall,
-  onTriggerToast 
+  onTriggerToast,
+  focusCancelled = false
 }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(focusCancelled ? 'cancelled' : 'all');
   const [selectedPayment, setSelectedPayment] = useState('all');
   const [selectedCallStatus, setSelectedCallStatus] = useState('all');
   const [selectedEvent, setSelectedEvent] = useState(selectedEventFilter || '');
@@ -60,12 +63,20 @@ export default function DataTable({
     setSelectedEvent(selectedEventFilter || '');
   }, [selectedEventFilter]);
 
+  // The win-back banner jumps the table to the cancelled tab. The remount key in
+  // App.jsx resets every other filter, so this only needs the initial value.
+  useEffect(() => {
+    if (focusCancelled) setSelectedCategory('cancelled');
+  }, [focusCancelled]);
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [copiedEmail, setCopiedEmail] = useState(null);
 
-  // Fetch call records database (reactive to callDbVersion from Neon cloud)
+  // Call records live in localStorage rather than React state, so the memo depends
+  // on callDbVersion: App bumps it whenever a sync completes to force a re-read.
+   
   const callRecords = useMemo(() => getCallRecords(), [participants, callDbVersion]);
 
   // Active domain info if scoped
@@ -95,6 +106,10 @@ export default function DataTable({
           refundedEventsCount: 0,
           paidEventsCount: 0,
           unpaidEventsCount: 0,
+          cancelledEventsCount: 0,
+          revertedEventsCount: 0,
+          cancelled_at: null,
+          cancel_reason: '',
           registeredEventNames: []
         });
       }
@@ -105,10 +120,16 @@ export default function DataTable({
       }
 
       const amt = Number(p.amount) || 0;
+      const isCancelled = isParticipantCancelled(p);
       const isRef = isParticipantRefunded(p);
       const isPaid = isParticipantPaid(p);
 
-      if (isRef) {
+      if (isCancelled) {
+        candidate.cancelledEventsCount++;
+        if (p.cancel_reverted) candidate.revertedEventsCount++;
+        if (p.cancelled_at && !candidate.cancelled_at) candidate.cancelled_at = p.cancelled_at;
+        if (p.cancel_reason) candidate.cancel_reason = p.cancel_reason;
+      } else if (isRef) {
         candidate.refundedEventsCount++;
         candidate.totalAmountRefunded += amt;
       } else if (isPaid) {
@@ -124,10 +145,14 @@ export default function DataTable({
         event_id: p.event_id,
         event_name: p.event_name,
         event_type: p.event_type,
-        payment_status: isRef ? 'REFUNDED' : (isPaid ? 'PAID' : 'UNPAID'),
+        payment_status: isCancelled ? 'CANCELLED' : (isRef ? 'REFUNDED' : (isPaid ? 'PAID' : 'UNPAID')),
         amount: p.amount,
         is_paid: isPaid,
         is_refunded: isRef,
+        is_cancelled: isCancelled,
+        cancel_reverted: p.cancel_reverted === true,
+        cancelled_at: p.cancelled_at,
+        cancel_reason: p.cancel_reason,
         status_label: p.status_label,
         registered_at: p.registered_at,
         team_name: p.team_name,
@@ -142,17 +167,28 @@ export default function DataTable({
 
     return Array.from(map.values()).map(c => {
       c.eventsCount = c.events.length;
-      if (c.refundedEventsCount > 0) {
+      if (c.cancelledEventsCount > 0) {
+        // A cancellation dominates the candidate's status: this is the win-back case
+        c.is_cancelled = true;
+        c.is_refunded = false;
+        c.is_paid = false;
+        c.payment_status = 'CANCELLED';
+        c.status_label = c.revertedEventsCount > 0 ? 'Cancelled — Won Back' : 'Registration Cancelled';
+        c.amount = 0;
+      } else if (c.refundedEventsCount > 0) {
+        c.is_cancelled = false;
         c.payment_status = 'REFUNDED';
         c.is_refunded = true;
         c.is_paid = false;
         c.amount = c.totalAmountRefunded;
       } else if (c.paidEventsCount > 0) {
+        c.is_cancelled = false;
         c.payment_status = 'PAID';
         c.is_paid = true;
         c.is_refunded = false;
         c.amount = c.totalAmountPaid;
       } else {
+        c.is_cancelled = false;
         c.payment_status = 'UNPAID';
         c.is_paid = false;
         c.is_refunded = false;
@@ -191,13 +227,32 @@ export default function DataTable({
       const refunded = activeDataset.filter(p => p.refundedEventsCount > 0).length;
       const paid = activeDataset.filter(p => p.paidEventsCount > 0 && (p.refundedEventsCount === 0 || !p.refundedEventsCount)).length;
       const unpaid = activeDataset.filter(p => (!p.refundedEventsCount || p.refundedEventsCount === 0) && (!p.paidEventsCount || p.paidEventsCount === 0)).length;
-      return { all: activeDataset.length, refunded, unpaid, paid };
+      const cancelled = activeDataset.filter(p => p.cancelledEventsCount > 0).length;
+      const reverted = activeDataset.filter(p => p.revertedEventsCount > 0).length;
+      return { all: activeDataset.length, refunded, unpaid, paid, cancelled, reverted };
     }
     const refunded = participants.filter(p => isParticipantRefunded(p)).length;
     const paid = participants.filter(p => isParticipantPaid(p)).length;
     const unpaid = participants.filter(p => isParticipantUnpaid(p)).length;
-    return { all: participants.length, refunded, unpaid, paid };
+    const cancelled = participants.filter(p => isParticipantCancelled(p) && !p.cancel_reverted).length;
+    const reverted = participants.filter(p => isParticipantCancelled(p) && p.cancel_reverted).length;
+    return { all: participants.length, refunded, unpaid, paid, cancelled, reverted };
   }, [activeDataset, isGroupedMode, participants]);
+
+  // Cancellations needing a win-back attempt, sorted ahead of everything else so
+  // nobody is left uncontacted. Reverted rows sit below the outstanding ones.
+  const cancellationPriority = useMemo(() => {
+    const priority = new Map();
+    activeDataset.forEach(p => {
+      const rows = isGroupedMode && Array.isArray(p.events) ? p.events : [p];
+      const hasCancelled = rows.some(isParticipantCancelled);
+      const isReverted = hasCancelled && rows.some(r => r.cancel_reverted);
+      if (hasCancelled) {
+        priority.set(p.uniqueKey || String(p.id), isReverted ? 1 : 0);
+      }
+    });
+    return priority;
+  }, [activeDataset, isGroupedMode]);
 
   // Calling counts for quick segmented filter (to prevent duplicate calls)
   const callCounts = useMemo(() => {
@@ -212,6 +267,8 @@ export default function DataTable({
       }
     });
     return { all: activeDataset.length, called, neverCalled };
+    // callDbVersion invalidates the localStorage read after a cloud sync
+     
   }, [activeDataset, callDbVersion]);
 
   // Master events list for dropdown (guaranteed to include all domain events)
@@ -250,40 +307,48 @@ export default function DataTable({
   // Filter & Search logic
   const filteredParticipants = useMemo(() => {
     return activeDataset.filter(p => {
-      // 1. Category
-      if (selectedCategory !== 'all') {
-        if (isGroupedMode && Array.isArray(p.events)) {
-          const hasCategory = p.events.some(ev => {
-            const t = (ev.event_type || 'competitions').toLowerCase();
-            if (selectedCategory === 'quizzes') return t.includes('quiz');
-            if (selectedCategory === 'hackathons') return t.includes('hack');
-            if (selectedCategory === 'cultural') return t.includes('cultur');
-            return !t.includes('quiz') && !t.includes('hack') && !t.includes('cultur');
-          });
-          if (!hasCategory) return false;
-        } else {
-          const t = (p.event_type || 'competitions').toLowerCase();
-          if (selectedCategory === 'quizzes' && !t.includes('quiz')) return false;
-          if (selectedCategory === 'hackathons' && !t.includes('hack')) return false;
-          if (selectedCategory === 'cultural' && !t.includes('cultur')) return false;
-          if (selectedCategory === 'competitions' && (t.includes('quiz') || t.includes('hack') || t.includes('cultur'))) return false;
-        }
+      // 1. Category. 'cancelled' is surfaced as its own tab so win-back work is reachable
+      if (selectedCategory === 'cancelled') {
+        const rows = isGroupedMode && Array.isArray(p.events) ? p.events : [p];
+        if (!rows.some(isParticipantCancelled)) return false;
+      } else if (selectedCategory !== 'all') {
+        const rows = isGroupedMode && Array.isArray(p.events) ? p.events : [p];
+        const hasCategory = rows.some(ev => {
+          const t = (ev.event_type || 'competitions').toLowerCase();
+          if (selectedCategory === 'quizzes') return t.includes('quiz');
+          if (selectedCategory === 'hackathons') return t.includes('hack');
+          if (selectedCategory === 'cultural') return t.includes('cultur');
+          return !t.includes('quiz') && !t.includes('hack') && !t.includes('cultur');
+        });
+        if (!hasCategory) return false;
       }
 
       // 2. Payment Filter
       if (selectedPayment !== 'all') {
-        if (isGroupedMode) {
-          if (selectedPayment === 'refunded' && (!p.refundedEventsCount || p.refundedEventsCount === 0)) return false;
-          if (selectedPayment === 'paid' && (!p.paidEventsCount || p.paidEventsCount === 0)) return false;
-          if (selectedPayment === 'unpaid' && (p.refundedEventsCount > 0 || p.paidEventsCount > 0)) return false;
-        } else {
-          const isRef = isParticipantRefunded(p);
-          const isPaid = isParticipantPaid(p);
-          const isUnp = isParticipantUnpaid(p);
+        if (isGroupedMode && Array.isArray(p.events)) {
+          const rows = p.events;
+          const isRef = rows.some(isParticipantRefunded);
+          const isPaid = rows.some(isParticipantPaid);
+          const isUnp = rows.some(isParticipantUnpaid);
+          const isCancelled = rows.some(isParticipantCancelled);
+          const isReverted = isCancelled && rows.some(r => r.cancel_reverted);
 
           if (selectedPayment === 'refunded' && !isRef) return false;
           if (selectedPayment === 'paid' && !isPaid) return false;
           if (selectedPayment === 'unpaid' && !isUnp) return false;
+          if (selectedPayment === 'cancelled' && !isCancelled) return false;
+          if (selectedPayment === 'reverted' && !isReverted) return false;
+        } else {
+          const isRef = isParticipantRefunded(p);
+          const isPaid = isParticipantPaid(p);
+          const isUnp = isParticipantUnpaid(p);
+          const isCancelled = isParticipantCancelled(p);
+
+          if (selectedPayment === 'refunded' && !isRef) return false;
+          if (selectedPayment === 'paid' && !isPaid) return false;
+          if (selectedPayment === 'unpaid' && !isUnp) return false;
+          if (selectedPayment === 'cancelled' && !isCancelled) return false;
+          if (selectedPayment === 'reverted' && !(isCancelled && p.cancel_reverted)) return false;
         }
       }
 
@@ -352,6 +417,11 @@ export default function DataTable({
 
       return true;
     }).sort((a, b) => {
+      // Cancellations needing a win-back attempt float to the top by default
+      const cancelA = cancellationPriority.get(a.uniqueKey || String(a.id)) ?? 9;
+      const cancelB = cancellationPriority.get(b.uniqueKey || String(b.id)) ?? 9;
+      if (cancelA !== cancelB) return cancelA - cancelB;
+
       if (sortBy === 'date-desc') return new Date(b.registered_at || 0) - new Date(a.registered_at || 0);
       if (sortBy === 'date-asc') return new Date(a.registered_at || 0) - new Date(b.registered_at || 0);
       if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
@@ -364,7 +434,10 @@ export default function DataTable({
       }
       return 0;
     });
-  }, [activeDataset, isGroupedMode, callRecords, selectedCategory, selectedPayment, selectedCallStatus, selectedEvent, selectedCollege, searchQuery, sortBy, activeDomain]);
+    // callRecords is the localStorage read that the calls-desc sort depends on;
+    // it is listed so a cloud sync re-sorts the table
+     
+  }, [activeDataset, isGroupedMode, callRecords, selectedCategory, selectedPayment, selectedCallStatus, selectedEvent, selectedCollege, searchQuery, sortBy, activeDomain, cancellationPriority]);
 
   // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(filteredParticipants.length / (pageSize === 'all' ? 999999 : pageSize)));
@@ -436,6 +509,7 @@ export default function DataTable({
         <div className="flex items-center gap-1 overflow-x-auto w-full xl:w-auto pb-2 xl:pb-0 scrollbar-none">
           {[
             { id: 'all', label: 'All Events', count: categoryCounts.all, countClass: 'text-slate-600 bg-slate-100', icon: Sparkles },
+            { id: 'cancelled', label: 'Cancelled', count: paymentCounts.cancelled, countClass: 'text-rose-700 bg-rose-50 border border-rose-200', icon: XCircle },
             { id: 'competitions', label: 'Competitions', count: categoryCounts.competitions, countClass: 'text-sky-700 bg-sky-50', icon: Trophy },
             { id: 'quizzes', label: 'Quizzes', count: categoryCounts.quizzes, countClass: 'text-amber-700 bg-amber-50', icon: HelpCircle },
             { id: 'hackathons', label: 'Hackathons', count: categoryCounts.hackathons, countClass: 'text-purple-700 bg-purple-50', icon: Terminal },
@@ -647,6 +721,17 @@ export default function DataTable({
         </div>
       )}
 
+      {/* Win-back context when the table is focused on cancelled registrations */}
+      {focusCancelled && pageItems.some(isParticipantCancelled) && (
+        <div className="px-4 py-2.5 border-b border-amber-200 bg-amber-50 flex items-center gap-2 text-[11px] text-amber-900">
+          <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+          <span>
+            Showing cancelled registrations. Call each one to capture why they left and whether
+            they re-registered with the same email.
+          </span>
+        </div>
+      )}
+
       {/* 3. High Density Desktop Table */}
       <div className="overflow-x-auto hidden md:block">
         <table className="w-full text-left text-xs border-collapse">
@@ -667,8 +752,14 @@ export default function DataTable({
                 <td colSpan={7} className="py-16 text-center text-slate-500">
                   <div className="max-w-xs mx-auto">
                     <Filter className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                    <p className="font-semibold text-sm text-slate-800">No participants found</p>
-                    <p className="text-xs text-slate-500 mt-1">Try resetting search terms or switching categories.</p>
+                    <p className="font-semibold text-sm text-slate-800">
+                      {focusCancelled ? 'No cancelled registrations' : 'No participants found'}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {focusCancelled
+                        ? 'Nobody has cancelled a registration in this scope.'
+                        : 'Try resetting search terms or switching categories.'}
+                    </p>
                     <button
                       onClick={handleResetFilters}
                       className="mt-3 px-3 py-1.5 text-xs text-sky-700 bg-sky-50 border border-sky-200 rounded-lg hover:bg-sky-100 transition-all font-medium cursor-pointer"
@@ -685,7 +776,6 @@ export default function DataTable({
                 const initials = getInitials(p.name);
                 const cleanPhone = (p.phone || '').replace(/[^0-9]/g, '');
                 const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}` : null;
-                const amt = Number(p.amount) || 0;
                 const hasMembers = p.team_members && p.team_members.length > 0;
 
                 // Call CRM record (checks candidate uniqueKey, allIds, and phone)
@@ -696,12 +786,30 @@ export default function DataTable({
                 // Resolve domain
                 const domainInfo = getDomainForEvent(p.event_name);
 
+                const rowIsCancelled = isParticipantCancelled(p);
+
                 return (
                   <tr 
                     key={p.uniqueKey || p.id || idx}
                     onClick={() => onSelectParticipant(p)}
-                    className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
+                    className={`cursor-pointer transition-colors group ${
+                      rowIsCancelled
+                        ? p.cancel_reverted
+                          ? 'bg-emerald-50/40 hover:bg-emerald-50/70'
+                          : 'bg-rose-50/50 hover:bg-rose-50/80'
+                        : 'hover:bg-slate-50/80'
+                    }`}
                   >
+                    {rowIsCancelled && (
+                      <td className="py-3 w-1 px-0">
+                        <span
+                          className={`block w-1 h-full rounded-r ${
+                            p.cancel_reverted ? 'bg-emerald-500' : 'bg-rose-500'
+                          }`}
+                          aria-hidden="true"
+                        />
+                      </td>
+                    )}
                     {/* Index */}
                     <td className="py-3 px-3 text-center font-mono text-[11px] text-slate-400">
                       {absoluteIndex}
@@ -737,6 +845,23 @@ export default function DataTable({
                               >
                                 <PhoneCall className="w-2.5 h-2.5 text-amber-600" />
                                 <span>Called ({callCount})</span>
+                              </span>
+                            )}
+                            {rowIsCancelled && (
+                              <span
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9.5px] font-bold border shrink-0 ${
+                                  p.cancel_reverted
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                    : 'bg-rose-100 text-rose-800 border-rose-300'
+                                }`}
+                                title={
+                                  p.cancel_reverted
+                                    ? 'Won back: re-registered on techfest26.in'
+                                    : `Cancelled registration${p.cancelled_at ? ` on ${new Date(p.cancelled_at).toLocaleDateString('en-IN')}` : ''}. Call to capture the reason.`
+                                }
+                              >
+                                <XCircle className="w-2.5 h-2.5" />
+                                <span>{p.cancel_reverted ? 'Won Back' : 'Cancelled'}</span>
                               </span>
                             )}
                           </div>
@@ -1004,7 +1129,9 @@ export default function DataTable({
       <div className="md:hidden divide-y divide-slate-100 bg-white">
         {pageItems.length === 0 ? (
           <div className="py-12 text-center text-slate-500 text-xs">
-            No participants found matching active filters.
+            {focusCancelled
+              ? 'No cancelled registrations in this scope.'
+              : 'No participants found matching active filters.'}
           </div>
         ) : (
           pageItems.map((p, idx) => {
@@ -1012,7 +1139,6 @@ export default function DataTable({
             const initials = getInitials(p.name);
             const cleanPhone = (p.phone || '').replace(/[^0-9]/g, '');
             const waLink = cleanPhone ? `https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}` : null;
-            const amt = Number(p.amount) || 0;
             const rec = getParticipantCallRecord(p);
             const callCount = rec?.callCount || 0;
             const statusDef = rec?.lastStatus ? CALL_STATUSES[rec.lastStatus] : null;
@@ -1022,7 +1148,13 @@ export default function DataTable({
               <div 
                 key={p.uniqueKey || p.id || idx}
                 onClick={() => onSelectParticipant(p)}
-                className="p-4 space-y-2.5 active:bg-slate-50 cursor-pointer"
+                className={`p-4 space-y-2.5 cursor-pointer active:bg-slate-50 ${
+                  isParticipantCancelled(p)
+                    ? p.cancel_reverted
+                      ? 'bg-emerald-50/40 border-l-2 border-emerald-500'
+                      : 'bg-rose-50/50 border-l-2 border-rose-500'
+                    : ''
+                }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">

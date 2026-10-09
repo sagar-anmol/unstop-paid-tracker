@@ -13,8 +13,24 @@ import {
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { updateUserOwnPassword } from '../utils/auth';
+import {
+  updateUserOwnPassword,
+  isUserUsingDefaultPassword,
+  DEFAULT_INITIAL_PASSWORD,
+  NEW_ACCOUNT_INITIAL_PASSWORD
+} from '../utils/auth';
 import { addAuditLog } from '../utils/callStore';
+
+// Passwords nobody should keep: the shared initial values and legacy defaults
+const WEAK_PASSWORDS = new Set([
+  (DEFAULT_INITIAL_PASSWORD || '').toLowerCase(),
+  (NEW_ACCOUNT_INITIAL_PASSWORD || '').toLowerCase(),
+  'techfest@2026',
+  'sliet@2026',
+  'paisa@123',
+  'password',
+  '12345678'
+]);
 
 export default function ForcePasswordChangeModal({
   isOpen,
@@ -31,7 +47,13 @@ export default function ForcePasswordChangeModal({
 
   if (!isOpen || !currentUser) return null;
 
-  const handleSubmit = (e) => {
+  const isBlocking = isForced && isUserUsingDefaultPassword(currentUser.username);
+
+  // Self-service change from the header is always allowed; the forced flow on
+  // first sign-in only applies while the account is still on its default.
+  if (isForced && !isUserUsingDefaultPassword(currentUser.username)) return null;
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -45,15 +67,17 @@ export default function ForcePasswordChangeModal({
       return;
     }
 
-    if (newPassword.trim() === 'Techfest@2026' || newPassword.trim() === 'sliet@2026') {
-      setError('Please choose a new, unique password instead of the default.');
+    if (WEAK_PASSWORDS.has(newPassword.trim().toLowerCase())) {
+      setError('Please choose a new, unique password instead of a default one.');
       return;
     }
 
+// Guard against a double submit while the hash is being written
+    if (isSaving) return;
     setIsSaving(true);
 
     try {
-      updateUserOwnPassword(currentUser.username, newPassword.trim());
+      await updateUserOwnPassword(currentUser.username, newPassword.trim());
 
       addAuditLog({
         actorName: currentUser.name,
@@ -110,13 +134,15 @@ export default function ForcePasswordChangeModal({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg transition-colors cursor-pointer"
-            title="Dismiss (Change later)"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {!isBlocking && (
+            <button
+              onClick={onClose}
+              className="text-zinc-400 hover:text-zinc-700 p-1 rounded-lg transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Form Body */}
@@ -186,13 +212,20 @@ export default function ForcePasswordChangeModal({
           )}
 
           <div className="pt-2 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3.5 py-2 text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer font-medium"
-            >
-              Skip for now
-            </button>
+            {isBlocking ? (
+              <p className="text-[11px] text-zinc-500 max-w-[15rem] leading-relaxed">
+                Set your own password to continue. This account cannot reach the
+                dashboard until you do.
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3.5 py-2 text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-colors cursor-pointer font-medium"
+              >
+                Cancel
+              </button>
+            )}
 
             <button
               type="submit"

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { DOMAINS_DIRECTORY, getDomainStats } from '../utils/auth';
+import { getCallRecords } from '../utils/callStore';
 
 export default function DomainBanner({ 
   domainId, 
@@ -9,10 +10,42 @@ export default function DomainBanner({
   selectedEvent 
 }) {
   const domain = DOMAINS_DIRECTORY[domainId];
-  if (!domain) return null;
-
-  const stats = getDomainStats(domainId, participants);
   const isSuperAdmin = currentUser?.role === 'super_admin';
+
+  const stats = useMemo(
+    () => (domain ? getDomainStats(domainId, participants) : null),
+    [domain, domainId, participants]
+  );
+
+  // Real call coverage scoped to this domain's participants
+  const callCoverage = useMemo(() => {
+    if (!participants.length) return { called: 0, pct: 0 };
+    const records = getCallRecords();
+    const ids = new Set(participants.map(p => String(p.id)));
+    const called = [...ids].filter(id => (records[id]?.callCount || 0) > 0).length;
+    return { called, pct: Math.round((called / ids.size) * 100) };
+  }, [participants]);
+
+  // Per-event call coverage, computed once for all event chips
+  const eventCalledPct = useMemo(() => {
+    const records = getCallRecords();
+    const byEvent = {};
+    participants.forEach(p => {
+      const ev = p.event_name;
+      if (!ev) return;
+      if (!byEvent[ev]) byEvent[ev] = { total: 0, called: 0 };
+      byEvent[ev].total += 1;
+      if ((records[String(p.id)]?.callCount || 0) > 0) byEvent[ev].called += 1;
+    });
+    const out = {};
+    Object.entries(byEvent).forEach(([ev, v]) => {
+      out[ev] = v.total > 0 ? Math.round((v.called / v.total) * 100) : 0;
+    });
+    return out;
+  }, [participants]);
+
+  // Early return: everything above must stay unconditional so hook order is stable
+  if (!domain || !stats) return null;
 
   return (
     <div className="bg-white rounded-xl p-5 mb-6 border border-slate-200 shadow-sm relative overflow-hidden">
@@ -67,7 +100,7 @@ export default function DomainBanner({
 
         {/* Domain Metrics Row */}
         {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
             <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80">
               <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold">
                 {selectedEvent ? 'Event Attendees' : 'Domain Attendees'}
@@ -98,6 +131,27 @@ export default function DomainBanner({
                 {stats.totalParticipants > 0 ? Math.round((stats.paidCount / stats.totalParticipants) * 100) : 0}%
               </div>
               <div className="text-[10px] font-mono text-amber-700 mt-0.5">Paid Conversion Ratio</div>
+              {/* Real progress bar: paid vs total for this domain */}
+              <div className="w-full h-1 rounded-full bg-amber-100 overflow-hidden mt-1.5">
+                <div
+                  style={{ width: `${stats.totalParticipants > 0 ? Math.round((stats.paidCount / stats.totalParticipants) * 100) : 0}%` }}
+                  className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-sky-50/60 border border-sky-200/80">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-sky-800 font-semibold">Call Coverage</div>
+              <div className="text-xl font-bold text-sky-800 mt-0.5">{callCoverage.pct}%</div>
+              <div className="text-[10px] font-mono text-sky-700/80 mt-0.5">
+                {callCoverage.called} of {participants.length} contacted
+              </div>
+              <div className="w-full h-1 rounded-full bg-sky-100 overflow-hidden mt-1.5">
+                <div
+                  style={{ width: `${callCoverage.pct}%` }}
+                  className="h-full bg-sky-500 rounded-full transition-all duration-500"
+                />
+              </div>
             </div>
           </div>
         )}
@@ -122,10 +176,13 @@ export default function DomainBanner({
             {domain.events.map((ev, i) => {
               const isSelected = selectedEvent === ev;
               const evCount = stats?.eventCounts?.[ev] ?? 0;
+              // Per-event progress: share of this event's attendees who have been contacted
+              const evCalled = eventCalledPct[ev] ?? 0;
               return (
                 <button
                   key={i}
                   onClick={() => onSelectEventFilter && onSelectEventFilter(isSelected ? '' : ev)}
+                  title={`${evCount} registered • ${evCalled}% contacted`}
                   className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                     isSelected
                       ? 'bg-slate-900 text-white shadow-xs'
@@ -138,6 +195,11 @@ export default function DomainBanner({
                   }`}>
                     {evCount}
                   </span>
+                  {evCount > 0 && (
+                    <span className={`w-1 h-1 rounded-full ${
+                      evCalled >= 60 ? 'bg-emerald-500' : evCalled > 0 ? 'bg-amber-400' : 'bg-zinc-300'
+                    }`} />
+                  )}
                 </button>
               );
             })}

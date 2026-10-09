@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   X, 
   Phone, 
@@ -21,7 +21,8 @@ import {
   Edit3,
   Trophy,
   Layers,
-  RotateCcw
+  RotateCcw,
+  XCircle
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,10 +32,9 @@ import { getAvatarStyle, getInitials } from '../utils/avatar';
 import { getParticipantCallRecord, CALL_STATUSES, formatCallTime } from '../utils/callStore';
 import { getDomainForEvent } from '../utils/auth';
 import { 
-  isParticipantRefunded, 
-  isParticipantPaid, 
-  isParticipantUnpaid, 
-  getPaymentBadgeConfig 
+  isParticipantRefunded,
+  isParticipantPaid,
+  isParticipantCancelled
 } from '../utils/paymentUtils';
 
 export default function CandidateDrawer({ 
@@ -53,6 +53,43 @@ export default function CandidateDrawer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Edit state. These hooks must run on every render, including the one where
+  // the drawer is closed, so the early return below them is deliberate.
+  const [isEditing, setIsEditing] = useState(false);
+  const [editStatus, setEditStatus] = useState('');
+  const [editAmount, setEditAmount] = useState('0');
+  const [editPaymentId, setEditPaymentId] = useState('');
+  const [editUtr, setEditUtr] = useState('');
+  const [editRemark, setEditRemark] = useState('');
+
+  // Retrieve call history & timeline
+  const callRecord = useMemo(() => {
+    if (!participant) return null;
+    return getParticipantCallRecord(participant);
+    // callDbVersion forces a re-read after a cloud sync; getParticipantCallRecord
+    // reads localStorage rather than React state, so ESLint cannot see the link
+     
+  }, [participant, callDbVersion]);
+
+  useEffect(() => {
+    if (!participant) return;
+    setEditStatus(
+      participant.payment_status ||
+      (isParticipantCancelled(participant)
+        ? 'CANCELLED'
+        : isParticipantRefunded(participant)
+          ? 'REFUNDED'
+          : isParticipantPaid(participant)
+            ? 'PAID'
+            : 'UNPAID')
+    );
+    setEditAmount(participant.amount !== undefined ? String(participant.amount) : '0');
+    setEditPaymentId(participant.payment_id || '');
+    setEditUtr(participant.utr_number || '');
+    setEditRemark(participant.admin_note || '');
+    setIsEditing(false);
+  }, [participant]);
+
   if (!participant) return null;
 
   const initials = getInitials(participant.name);
@@ -65,34 +102,12 @@ export default function CandidateDrawer({
   const amt = Number(participant.amount) || 0;
   const hasMembers = participant.team_members && Array.isArray(participant.team_members) && participant.team_members.length > 0;
 
-  // Retrieve call history & timeline
-  const callRecord = useMemo(() => {
-    if (!participant) return null;
-    return getParticipantCallRecord(participant);
-  }, [participant, callDbVersion]);
   const callCount = callRecord?.callCount || 0;
   const history = callRecord?.history || [];
   const latestStatusDef = callRecord?.lastStatus ? CALL_STATUSES[callRecord.lastStatus] : null;
 
-  // Edit state for WebDev and Super Admins
+  // Edit rights for WebDev and Super Admins
   const canEdit = currentUser?.role === 'super_admin' || currentUser?.role === 'webdev';
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [editStatus, setEditStatus] = React.useState(participant.payment_status || (isParticipantRefunded(participant) ? 'REFUNDED' : (isParticipantPaid(participant) ? 'PAID' : 'UNPAID')));
-  const [editAmount, setEditAmount] = React.useState(participant.amount !== undefined ? String(participant.amount) : '0');
-  const [editPaymentId, setEditPaymentId] = React.useState(participant.payment_id || '');
-  const [editUtr, setEditUtr] = React.useState(participant.utr_number || '');
-  const [editRemark, setEditRemark] = React.useState(participant.admin_note || '');
-
-  React.useEffect(() => {
-    if (participant) {
-      setEditStatus(participant.payment_status || (isParticipantRefunded(participant) ? 'REFUNDED' : (isParticipantPaid(participant) ? 'PAID' : 'UNPAID')));
-      setEditAmount(participant.amount !== undefined ? String(participant.amount) : '0');
-      setEditPaymentId(participant.payment_id || '');
-      setEditUtr(participant.utr_number || '');
-      setEditRemark(participant.admin_note || '');
-      setIsEditing(false);
-    }
-  }, [participant]);
 
   const handleSaveEdit = (e) => {
     e.preventDefault();
@@ -101,6 +116,7 @@ export default function CandidateDrawer({
         payment_status: editStatus,
         is_paid: editStatus === 'PAID',
         is_refunded: editStatus === 'REFUNDED',
+        is_cancelled: editStatus === 'CANCELLED',
         amount: Number(editAmount) || 0,
         payment_id: editPaymentId.trim(),
         utr_number: editUtr.trim(),
@@ -297,6 +313,7 @@ export default function CandidateDrawer({
                       <option value="UNPAID">UNPAID (Pending techfest26.in)</option>
                       <option value="REFUNDED">REFUNDED (Unstop Refunded)</option>
                       <option value="PAID">PAID (techfest26.in Confirmed)</option>
+                      <option value="CANCELLED">CANCELLED (Win-back Pending)</option>
                     </select>
                   </div>
 
@@ -454,17 +471,57 @@ export default function CandidateDrawer({
             )}
 
             {/* Payment & Verification Status Banner */}
-            {isParticipantRefunded(participant) ? (
+            {isParticipantCancelled(participant) ? (
+              <div className={`p-3.5 rounded-xl border shadow-xs ${
+                participant.cancel_reverted
+                  ? 'bg-emerald-50 border-emerald-300'
+                  : 'bg-rose-50 border-rose-300 animate-pulse'
+              }`}>
+                <div className={`text-[10px] font-mono uppercase tracking-wider font-semibold mb-0.5 flex items-center gap-1.5 ${
+                  participant.cancel_reverted ? 'text-emerald-700' : 'text-rose-700'
+                }`}>
+                  <XCircle className="w-3.5 h-3.5" />
+                  {participant.cancel_reverted ? 'Cancelled — Won Back' : 'Registration Cancelled'}
+                </div>
+                <div className={`flex items-center gap-2 font-semibold text-sm ${
+                  participant.cancel_reverted ? 'text-emerald-800' : 'text-rose-900'
+                }`}>
+                  {participant.cancel_reverted
+                    ? <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    : <AlertTriangle className="w-4 h-4 text-rose-600" />}
+                  <span>
+                    {participant.cancel_reverted
+                      ? 'Re-registered on techfest26.in'
+                      : 'Needs a win-back call to confirm the reason'}
+                  </span>
+                </div>
+                {participant.cancelled_at && (
+                  <div className="text-[11px] text-rose-700/90 mt-1">
+                    Cancelled on {new Date(participant.cancelled_at).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
+                  </div>
+                )}
+                {participant.cancel_reason && (
+                  <div className="text-[11px] text-rose-800 mt-0.5">
+                    Reason given: <span className="font-medium">{participant.cancel_reason}</span>
+                  </div>
+                )}
+                <div className="text-[11px] text-rose-700/80 mt-1 leading-relaxed">
+                  {participant.cancel_reverted
+                    ? 'Cleared automatically once this email appeared again in a techfest26.in registration created after the cancellation.'
+                    : 'Call them, capture why they cancelled, and confirm whether they re-registered with the same email.'}
+                </div>
+              </div>
+            ) : isParticipantRefunded(participant) ? (
               <div className="p-3.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 shadow-xs">
                 <div className="text-[10px] font-mono uppercase tracking-wider text-purple-700 font-semibold mb-0.5 flex items-center gap-1.5">
                   <RotateCcw className="w-3.5 h-3.5 text-purple-600" />
-                  Refund Processed (Unstop)
+                  Refunded on Unstop
                 </div>
                 <div className="flex items-center gap-2 font-semibold text-sm text-purple-900">
                   <span>Refunded {amt > 0 ? `₹${amt.toLocaleString('en-IN')}` : ''} • techfest26.in Payment Pending</span>
                 </div>
                 <div className="text-[11px] text-purple-700 mt-1">
-                  Unstop payment was refunded. Participant needs to complete their entry fee payment on techfest26.in.
+                  The Unstop fee was refunded. Their entry is now payable on techfest26.in, which is where the payment status is tracked.
                 </div>
                 {participant.payment_id && (
                   <div className="text-[10px] font-mono text-purple-600 mt-1.5 select-all">
@@ -494,7 +551,7 @@ export default function CandidateDrawer({
                 </div>
                 <div className="flex items-center gap-2 font-semibold text-sm text-indigo-800">
                   <Clock className="w-4 h-4 text-indigo-600" />
-                  <span>Payment Claimed • Saturday Batch Verification Desk</span>
+                  <span>Payment Claimed • awaiting reconciliation</span>
                 </div>
                 {callRecord.utrNumber && (
                   <div className="mt-1.5 flex items-center gap-2">

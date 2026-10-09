@@ -1,0 +1,142 @@
+name: Sync techfest26.in Payments
+
+# Reconciles coordinator payment claims against the techfest26.in admin API and
+# publishes the email -> events lookup used by the dashboard.
+#
+# Secrets required (Settings > Secrets and variables > Actions):
+#   ADMIN_API_KEY    x-api-key for /api/admin/payments
+#   NEON_DATABASE_URL  Postgres connection string for claim verdicts
+#
+# Every step is incremental: unchanged data produces an empty git diff and the
+# commit step is skipped.
+
+on:
+  schedule:
+    # Hourly, offset a few minutes past the hour to avoid the top-of-hour rush
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      admin_api_key:
+        description: 'Fresh ADMIN_API_KEY (optional override)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-payments
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch payments snapshot
+        env:
+          ADMIN_API_KEY: ${{ github.event.inputs.admin_api_key != '' && github.event.inputs.admin_api_key || secrets.ADMIN_API_KEY }}
+        run: |
+          if [ -z "$ADMIN_API_KEY" ]; then
+            echo "::error::ADMIN_API_KEY is not configured"
+            exit 1
+          fi
+          python scripts/fetch_techfest26_payments.py
+
+      - name: Ensure Neon schema
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          if [ -z "$NEON_DATABASE_URL" ]; then
+            echo "::warning::NEON_DATABASE_URL missing; skipping reconciliation"
+            exit 0
+          fi
+          node scripts/init_neon_tables.js
+
+      - name: Export open claims from Neon
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          if [ -z "$NEON_DATABASE_URL" ]; then
+            echo "no claims to export"
+            exit 0
+          fi
+          node scripts/apply_payment_verdicts.js --export-claims
+
+      - name: Reconcile claims
+        env:
+          WRITE_VERDICTS: 'true'
+        run: |
+          python scripts/reconcile_payments.py
+
+      - name: Apply verdicts to Neon
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          if [ -z "$NEON_DATABASE_URL" ]; then
+            echo "no verdicts to apply"
+            exit 0
+          fi
+          node scripts/apply_payment_verdicts.js
+
+      - name: Build participant events index
+        run: |
+          python scripts/build_participant_events_index.py
+
+      - name: Commit and push if changed
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/techfest26_payments.json data/payment_verdicts.json data/payment_claims_pending.json api/participant_events.json
+          if git diff --staged --quiet; then
+            echo "No API changes; nothing to commit."
+          else
+            git commit -m "chore(payments): reconcile techfest26.in claims [skip ci]"
+            git push
+          fi
+
+      - name: Write summary
+        run: |
+          {
+            echo "### techFEST '26 payments sync"
+            echo ""
+            if [ -f data/payment_verdicts.json ]; then
+              echo "| Verdict | Count |"
+              echo "| --- | --- |"
+              python3 - <<'PY'
+          import json, collections, os
+          path = "data/payment_verdicts.json"
+          if os.path.exists(path):
+              with open(path) as fh:
+                  verdicts = json.load(fh).get("verdicts", [])
+              counts = collections.Counter(v["state"] for v in verdicts)
+              for state, n in sorted(counts.items()):
+                  print(f"| {state} | {n} |")
+              if not counts:
+                  print("| _no open claims_ | 0 |")
+          PY
+            fi
+            echo ""
+            if [ -f api/participant_events.json ]; then
+              python3 - <<'PY'
+          import json
+          with open("api/participant_events.json") as fh:
+              data = json.load(fh)
+          print(f"Indexed **{data.get('people', 0)}** people across both sources.")
+          PY
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

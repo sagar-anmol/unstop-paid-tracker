@@ -1,0 +1,5 @@
+{
+  "verdicts": [],
+  "generated_at": null,
+  "note": "Written by scripts/reconcile_payments.py, applied to Neon by scripts/apply_payment_verdicts.js. Empty until the first reconciliation run."
+}

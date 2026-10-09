@@ -30,22 +30,23 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const dev = getDeviceInfo();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const res = authenticateUser(username, password);
+    try {
+      const res = await authenticateUser(username, password);
       if (!res.success) {
         setError(res.error);
-        setIsSubmitting(false);
         return;
       }
-
       onLoginSuccess(res.user);
+    } catch (err) {
+      setError(err?.message || 'Sign-in failed. Please try again.');
+    } finally {
       setIsSubmitting(false);
-    }, 200);
+    }
   };
 
   const handleResetSuccess = (targetUser, newPass) => {
@@ -144,8 +145,8 @@ export default function LoginScreen({ onLoginSuccess }) {
               </div>
 
               <div className="flex items-center justify-between mt-1 text-[11px] text-zinc-400 font-mono">
-                <span>Default Initial: Techfest@2026</span>
-                <span className="text-[10px] text-zinc-400">Admin Managed</span>
+                <span>Passwords are hashed &amp; admin managed</span>
+                <span className="text-[10px] text-zinc-400">Forgotten? Reset below</span>
               </div>
             </div>
 

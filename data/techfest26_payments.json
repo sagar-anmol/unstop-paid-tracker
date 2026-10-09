@@ -1,0 +1,6 @@
+{
+  "records": [],
+  "last_synced_at": null,
+  "source": "https://app.techfest26.com/api/admin/payments",
+  "note": "Populated by scripts/fetch_techfest26_payments.py in GitHub Actions. Empty until the first sync run."
+}

@@ -1,12 +1,22 @@
 {
-  "name": "unstop-paid-tracker",
+  "name": "techfest26-operations-console",
   "version": "1.0.0",
-  "description": "",
+  "description": "techFEST '26 operations console: registrations, calling desk, payment verification and cancellation win-back.",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp -f dist/index.source.html ./index.html && rm -rf ./assets && cp -r dist/assets ./",
-    "preview": "vite preview"
+    "build": "vite build && cp -f dist/index.source.html ./index.html && rm -rf ./assets && cp -r dist/assets ./ && rm -rf dist",
+    "preview": "vite preview",
+    "pages:serve": "python3 -m http.server 4173 --directory .",
+    "postbuild": "node scripts/check_bundle.mjs",
+    "lint": "eslint src",
+    "lint:strict": "eslint src --max-warnings 0",
+    "test": "node scripts/test_password_hashing.mjs && node scripts/check_payment_classification.mjs && python3 scripts/test_payment_reconciliation.py && python3 scripts/test_cancellation_winback.py",
+    "check:bundle": "node scripts/check_bundle.mjs",
+    "verify": "npm run lint && npm run test && npm run build && npm run check:bundle",
+    "migrate:neon": "node scripts/init_neon_tables.js",
+    "sync:payments": "python3 scripts/fetch_techfest26_payments.py",
+    "build:index": "python3 scripts/build_participant_events_index.py"
   },
   "repository": {
     "type": "git",
@@ -29,20 +39,21 @@
     "@radix-ui/react-slot": "^1.3.3",
     "@radix-ui/react-tabs": "^1.1.21",
     "@radix-ui/react-tooltip": "^1.2.16",
-    "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.49.0",
-    "puppeteer-core": "^25.12.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwind-merge": "^3.7.0",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.6.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.1.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.1"

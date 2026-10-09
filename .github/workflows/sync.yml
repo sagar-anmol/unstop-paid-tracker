@@ -54,10 +54,27 @@ jobs:
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/ data.json data.js
+          git add data/ data.json
           if git diff --staged --quiet; then
             echo "No changes in registration data."
           else
             git commit -m "chore(data): manual sync unstop registrations [skip ci]"
             git push
           fi
+
+      - name: Write summary
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          with open('data/summary.json') as fh:
+              s = json.load(fh)
+          print("### Unstop registration sync")
+          print("")
+          print(f"- Registrations: **{s.get('total_unstop_registrations', 0)}**")
+          print(f"- Refunded: **{s.get('total_refunded_registrations', 0)}**")
+          print(f"- Cancelled: **{s.get('total_cancelled_registrations', 0)}**")
+          print(f"- Awaiting payment: **{s.get('total_unpaid_registrations', 0)}**")
+          print(f"- Events scanned: **{s.get('total_events_scanned', 0)}**")
+          print(f"- Colleges: **{s.get('total_colleges', 0)}**")
+          print(f"- Last synced: `{s.get('last_synced_at', 'n/a')}`")
+          PY

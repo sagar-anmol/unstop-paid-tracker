@@ -1,1 +1,2 @@
+# Unstop registration scraper + techfest26.in payments sync
 requests>=2.31.0

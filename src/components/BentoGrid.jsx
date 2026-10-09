@@ -1,15 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { 
-  TrendingUp, 
-  Target, 
   PhoneCall, 
   ShieldCheck, 
-  Zap, 
-  Clock, 
-  CheckCircle2, 
-  ChevronRight,
-  Users,
-  AlertTriangle,
   ArrowUpRight,
   Smartphone,
   Laptop,
@@ -20,8 +12,8 @@ import { DOMAINS_DIRECTORY } from '../utils/auth';
 import { getAuditLogs, getCallRecords } from '../utils/callStore';
 import { 
   isParticipantRefunded, 
-  isParticipantPaid, 
-  isParticipantUnpaid 
+  isParticipantUnpaid,
+  isParticipantCancelled 
 } from '../utils/paymentUtils';
 
 export default function BentoGrid({ 
@@ -29,12 +21,10 @@ export default function BentoGrid({
   summary = {}, 
   currentUser,
   activeDomainId,
+  callDbVersion = 0,
   onOpenAuditLogs,
   onOpenVerificationQueue
 }) {
-  const [memoNote, setMemoNote] = useState('');
-  const [savedNotice, setSavedNotice] = useState(false);
-
   // Exact real numbers from dataset
   const totalCount = participants.length;
   
@@ -48,32 +38,35 @@ export default function BentoGrid({
     return participants.filter(p => isParticipantUnpaid(p)).length;
   }, [participants]);
 
-  // Paid candidate count (reserved for techfest26.in gateway)
-  const paidCount = useMemo(() => {
-    return participants.filter(p => isParticipantPaid(p)).length;
-  }, [participants]);
-
-  const refundedPct = totalCount > 0 ? Math.round((refundedCount / totalCount) * 100) : 0;
-  const unpaidPct = totalCount > 0 ? Math.round((unpaidCount / totalCount) * 100) : 0;
   const refundedPrecise = totalCount > 0 ? ((refundedCount / totalCount) * 100).toFixed(1) : '0.0';
   const unpaidPrecise = totalCount > 0 ? ((unpaidCount / totalCount) * 100).toFixed(1) : '0.0';
 
-  // Refunded revenue from Unstop
-  const refundedRevenue = useMemo(() => {
-    return participants.reduce((acc, p) => isParticipantRefunded(p) ? acc + (Number(p.amount) || 0) : acc, 0);
+  // Real catalog scale, derived rather than hardcoded
+  const eventCount = useMemo(() => {
+    return summary?.total_events_scanned || new Set(participants.map(p => p.event_name).filter(Boolean)).size;
+  }, [summary, participants]);
+
+  const eventsWithEntries = useMemo(() => {
+    return new Set(participants.map(p => p.event_name).filter(Boolean)).size;
   }, [participants]);
 
-  // Active gateway revenue (from techfest26.in)
-  const gatewayRevenue = useMemo(() => {
-    return participants.reduce((acc, p) => isParticipantPaid(p) ? acc + (Number(p.amount) || 0) : acc, 0);
-  }, [participants]);
+  const eventsWithEntriesPct = eventCount > 0
+    ? Math.min(100, Math.round((eventsWithEntries / eventCount) * 100))
+    : 0;
 
-  // Calling recovery pipeline (unpaid leads @ ₹199 standard fee)
-  const standardFee = 199;
-  const pipelineValue = unpaidCount * standardFee;
+  const domainCount = Object.keys(DOMAINS_DIRECTORY).length;
+  const cancelledCount = useMemo(
+    () => participants.filter(p => isParticipantCancelled(p)).length,
+    [participants]
+  );
+  const revertedCount = useMemo(
+    () => participants.filter(p => isParticipantCancelled(p) && p.cancel_reverted).length,
+    [participants]
+  );
 
-  // Real call stats from CRM store
-  const callRecords = useMemo(() => getCallRecords(), [participants]);
+  // Real call stats from the CRM store. The store lives in localStorage, so
+  // callDbVersion (bumped by App after every sync) is the invalidation signal.
+  const callRecords = useMemo(() => getCallRecords(), [callDbVersion]);
   const calledCount = useMemo(() => {
     return Object.values(callRecords).filter(r => (r.callCount || 0) > 0).length;
   }, [callRecords]);
@@ -117,6 +110,8 @@ export default function BentoGrid({
 
   // Real recent operations activities from audit store
   const recentActivities = useMemo(() => {
+    // getAuditLogs reads localStorage, which is not a React dependency; App
+    // remounts the grid via a key when a sync completes so this re-runs.
     const logs = getAuditLogs().slice(0, 8);
     if (logs.length > 0) {
       return logs.map((l, idx) => ({
@@ -124,7 +119,11 @@ export default function BentoGrid({
         title: `${l.actorName || 'Staff'} → ${l.targetName || 'Participant'}`,
         subtitle: l.details || l.eventName || 'Call logged',
         time: l.timestamp ? new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
-        icon: l.action === 'VERIFY_PAYMENT' ? ShieldCheck : PhoneCall,
+        icon: ['VERIFY_PAYMENT', 'CLAIM_RESOLVED'].includes(l.action)
+          ? ShieldCheck
+          : ['CANCELLATION_CONTACTED', 'CANCELLATION_REVERTED'].includes(l.action)
+            ? RotateCcw
+            : PhoneCall,
         device: l.device,
         deviceType: l.deviceType
       }));
@@ -132,17 +131,11 @@ export default function BentoGrid({
     return [];
   }, []);
 
-  const handleSaveQuota = (e) => {
-    e.preventDefault();
-    setSavedNotice(true);
-    setTimeout(() => setSavedNotice(false), 2500);
-  };
-
   return (
-    <div className="space-y-6 mb-8 font-sans">
+    <div className="mb-8 font-sans">
       
-      {/* 3-Column Bento Grid matching modern shadcn UI */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* Two cards plus the full-width activity feed below */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         
         {/* ========================================================
             CARD 1: Registration Velocity & Daily Chart Breakdown
@@ -158,13 +151,9 @@ export default function BentoGrid({
                   {totalCount.toLocaleString('en-IN')} Total
                 </span>
               </div>
-              <span className="text-[11px] font-mono text-purple-700 bg-purple-50 border border-purple-200/60 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                <RotateCcw className="w-3 h-3 text-purple-600" />
-                {refundedCount} Refunded
-              </span>
             </div>
             <p className="text-xs text-zinc-500 mb-4">
-              Daily student signups on Unstop & status breakdown
+              Daily registrations over the last 7 days
             </p>
 
             {/* Minimalist Neutral Bar Chart with Tooltips */}
@@ -189,7 +178,7 @@ export default function BentoGrid({
                             ? 'bg-zinc-900 shadow-xs' 
                             : 'bg-zinc-500 hover:bg-zinc-700'
                         }`}
-                        title={`${bar.label}: ${bar.count.toLocaleString('en-IN')} total (${bar.ref} refunded, ${bar.unp} unpaid)`}
+                        title={`${bar.label}: ${bar.count.toLocaleString('en-IN')} registrations (${bar.ref} refunded, ${bar.unp} awaiting payment)`}
                       />
                     </div>
                     <span className="text-[10px] font-medium text-zinc-500 group-hover:text-zinc-900 truncate">
@@ -200,58 +189,15 @@ export default function BentoGrid({
               </div>
             )}
 
-            {/* Split Progress Indicator: Refunded vs Unpaid */}
-            <div className="mb-4">
-              <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden flex">
-                <div 
-                  style={{ width: `${Math.max(1, Math.round((refundedCount / (totalCount || 1)) * 100))}%` }}
-                  className="bg-purple-600 h-full transition-all duration-500"
-                  title={`Refunded: ${refundedCount} (${refundedPrecise}%)`}
-                />
-                <div 
-                  style={{ width: `${Math.round((unpaidCount / (totalCount || 1)) * 100)}%` }}
-                  className="bg-amber-400 h-full transition-all duration-500"
-                  title={`Unpaid: ${unpaidCount} (${unpaidPrecise}%)`}
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-zinc-500 mt-1.5 font-mono gap-1">
-                <span className="flex items-center gap-1 font-semibold text-purple-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-600 inline-block" />
-                  Refunded: {refundedCount.toLocaleString('en-IN')} ({refundedPrecise}%)
-                </span>
-                <span className="flex items-center gap-1 font-semibold text-amber-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+            {/* Single canonical status split: unpaid vs refunded */}
+            <div className="mb-1">
+              <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono mb-1">
+                <span className="font-semibold text-amber-700">
                   Unpaid: {unpaidCount.toLocaleString('en-IN')} ({unpaidPrecise}%)
                 </span>
-              </div>
-            </div>
-
-            {/* 2 Stat Tiles: Refunded vs Unpaid */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
-              <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-200/70">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-purple-700 mb-1 flex items-center justify-between">
-                  <span>REFUNDED (UNSTOP)</span>
-                  <span className="text-[9px] font-mono text-purple-600 font-normal">{refundedPrecise}%</span>
-                </div>
-                <div className="text-xl font-bold text-purple-900">
-                  {refundedCount.toLocaleString('en-IN')}
-                </div>
-                <div className="text-[11px] text-purple-700 mt-0.5">
-                  Refund processed
-                </div>
-              </div>
-
-              <div className="bg-amber-50/60 rounded-xl p-3 border border-amber-100">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 mb-1 flex items-center justify-between">
-                  <span>UNPAID LEADS</span>
-                  <span className="text-[9px] font-mono text-amber-600 font-normal">{unpaidPrecise}%</span>
-                </div>
-                <div className="text-xl font-bold text-amber-950">
-                  {unpaidCount.toLocaleString('en-IN')}
-                </div>
-                <div className="text-[11px] text-amber-700 mt-0.5">
-                  Pending techfest26.in
-                </div>
+                <span className="font-semibold text-purple-700">
+                  Refunded: {refundedCount.toLocaleString('en-IN')} ({refundedPrecise}%)
+                </span>
               </div>
             </div>
           </div>
@@ -267,93 +213,7 @@ export default function BentoGrid({
 
 
         {/* ========================================================
-            CARD 2: Unstop Refunds & Calling Recovery Pipeline
-            ======================================================== */}
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="font-semibold text-sm text-zinc-900 tracking-tight">
-                Unstop Refunds & Pipeline
-              </h3>
-              <span className="text-[10px] font-mono text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
-                <RotateCcw className="w-2.5 h-2.5" />
-                Refunds Processed
-              </span>
-            </div>
-            <p className="text-xs text-zinc-500 mb-4">
-              All Unstop payments refunded • Future receipts via techfest26.in
-            </p>
-
-            {/* Hero Revenue Box */}
-            <div className="bg-zinc-900 rounded-xl p-3.5 sm:p-4 text-white mb-4 shadow-xs">
-              <div className="flex items-center justify-between text-zinc-400 text-xs mb-1">
-                <span className="font-medium">Total Unstop Payments Refunded</span>
-                <span className="text-[10px] font-mono bg-purple-950 text-purple-200 border border-purple-800 px-1.5 py-0.5 rounded">
-                  {refundedCount} Refunded
-                </span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-1">
-                ₹{refundedRevenue.toLocaleString('en-IN')}
-              </div>
-              <div className="text-[11px] text-zinc-400 flex flex-wrap items-center justify-between gap-1 pt-2 border-t border-zinc-800">
-                <span>RC Boat (₹2,995) • RoboSoccer (₹2,396) • Soldering (₹598) • Kritrim (₹599)</span>
-              </div>
-            </div>
-
-            {/* Recoverable Pipeline Target Card */}
-            <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100 mb-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  Calling Recovery Pipeline
-                </span>
-                <span className="text-xs font-bold text-zinc-900 font-mono">
-                  ₹{pipelineValue.toLocaleString('en-IN')}
-                </span>
-              </div>
-              <p className="text-[11px] text-zinc-500 mb-2">
-                {unpaidCount.toLocaleString('en-IN')} unpaid leads × ₹199 standard event entry fee
-              </p>
-              
-              {/* Recovery Progress Bar */}
-              <div className="w-full bg-zinc-200 h-1.5 rounded-full overflow-hidden mb-1.5">
-                <div 
-                  style={{ width: `${Math.min(100, Math.round((calledCount / Math.max(1, unpaidCount)) * 100))}%` }}
-                  className="bg-zinc-900 h-full rounded-full transition-all duration-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
-                <span>{calledCount} Calls Logged</span>
-                <span>Target: ₹{Math.round(unpaidCount * 199 * 0.15).toLocaleString('en-IN')} (15% Recovery)</span>
-              </div>
-            </div>
-
-            {/* Calling Guidelines / Memo */}
-            <div>
-              <label className="block text-xs font-medium text-zinc-700 mb-1.5">
-                Calling Desk Memo / Pitch
-              </label>
-              <textarea 
-                rows={2}
-                value={memoNote}
-                onChange={(e) => setMemoNote(e.target.value)}
-                placeholder="e.g. Complete payment on techfest26.in to confirm slot..."
-                className="w-full bg-white border border-zinc-200 rounded-xl p-2.5 text-xs text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-900 resize-none shadow-xs"
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={handleSaveQuota}
-            className="w-full bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl py-2.5 text-xs font-semibold shadow-xs transition-colors cursor-pointer mt-3"
-          >
-            {savedNotice ? '✓ Calling Memo Saved' : 'Save Calling Guidelines'}
-          </button>
-        </div>
-
-
-        {/* ========================================================
-            CARD 3: Registration Milestones & Conversion Funnel
+            CARD 2: Registration Milestones & Conversion Funnel
             ======================================================== */}
         <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-xs flex flex-col justify-between">
           <div>
@@ -369,17 +229,17 @@ export default function BentoGrid({
               </button>
             </div>
             <p className="text-xs text-zinc-500 mb-5">
-              Official Unstop conversion breakdown across 62 competitions
+              Payment status breakdown across {eventCount} competitions
             </p>
 
             <div className="space-y-4">
               
-              {/* Target 1: Refunded (Unstop) */}
+              {/* Target 1: Refunded on Unstop */}
               <div>
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-700 flex items-center gap-1">
                     <RotateCcw className="w-3 h-3 text-purple-600" />
-                    REFUNDED (UNSTOP)
+                    REFUNDED ON UNSTOP
                   </span>
                   <span className="font-mono font-bold text-purple-900 text-sm">
                     {refundedCount.toLocaleString('en-IN')}
@@ -425,25 +285,52 @@ export default function BentoGrid({
                 </div>
               </div>
 
-              {/* Target 3: Technical Catalog Scale */}
+              {/* Target 3: Cancellation Win-Back */}
+              {cancelledCount > 0 && (
+                <div className="pt-2 border-t border-zinc-100">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-700 flex items-center gap-1">
+                      <RotateCcw className="w-3 h-3 text-rose-600" />
+                      CANCELLATION WIN-BACK
+                    </span>
+                    <span className="font-mono font-bold text-rose-900 text-sm">
+                      {cancelledCount}
+                    </span>
+                  </div>
+                  <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden mb-1">
+                    <div
+                      style={{ width: `${cancelledCount > 0 ? Math.round((revertedCount / cancelledCount) * 100) : 0}%` }}
+                      className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                    <span>{revertedCount} won back</span>
+                    <span className="font-medium text-rose-700">{cancelledCount - revertedCount} to contact</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Target 4: Technical Catalog Scale */}
               <div className="pt-2 border-t border-zinc-100">
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                     EVENTS & DOMAINS
                   </span>
                   <span className="font-mono font-bold text-zinc-900 text-sm">
-                    62 Events
+                    {eventCount} Events
                   </span>
                 </div>
                 <div className="w-full bg-zinc-100 h-2 rounded-full overflow-hidden mb-1">
-                  <div 
-                    style={{ width: '100%' }}
-                    className="bg-zinc-700 h-full rounded-full"
+                  <div
+                    style={{ width: `${eventsWithEntriesPct}%` }}
+                    className="bg-zinc-700 h-full rounded-full transition-all duration-500"
                   />
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                  <span>13 Technical Bays & Domains</span>
-                  <span className="font-medium text-zinc-700">100% Synced</span>
+                  <span>{domainCount} Technical Bays & Domains</span>
+                  <span className="font-medium text-zinc-700">
+                    {eventsWithEntries} with entries
+                  </span>
                 </div>
               </div>
 
@@ -451,90 +338,90 @@ export default function BentoGrid({
           </div>
 
           <div className="pt-3 border-t border-zinc-100 text-xs text-zinc-400 flex items-center justify-between">
-            <span>Average Ticket: ₹199 - ₹200</span>
-            <span className="font-mono text-zinc-500">Total Leads: {totalCount.toLocaleString('en-IN')}</span>
-          </div>
-        </div>
-
-      </div>
-
-      {/* ========================================================
-          RECENT OPERATIONS ACTIVITY (Like Recent Transactions)
-          ======================================================== */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-xs">
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <h3 className="font-semibold text-sm text-zinc-900 tracking-tight">
-              Recent Operations Activity
-            </h3>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Live caller updates, status marks and verified claims
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-mono font-semibold bg-zinc-900 text-white">
-              {recentActivities.length} logs
+            <span>Total Leads: {totalCount.toLocaleString('en-IN')}</span>
+            <span className="font-mono text-zinc-500">
+              Called: {calledCount.toLocaleString('en-IN')}
             </span>
           </div>
         </div>
 
-        {/* List Rows or Clean Empty State */}
-        {recentActivities.length === 0 ? (
-          <div className="py-8 text-center text-zinc-400">
-            <PhoneCall className="w-8 h-8 mx-auto mb-2 text-zinc-300 stroke-[1.5]" />
-            <p className="text-xs font-medium text-zinc-600">No calling activity logged yet</p>
-            <p className="text-[11px] text-zinc-400 mt-0.5">Calls and verification updates logged by coordinators will appear here in real-time.</p>
+        {/* ========================================================
+            CARD 2: Recent Operations Activity
+            ======================================================== */}
+        <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 sm:p-6 shadow-xs flex flex-col">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <h3 className="font-semibold text-sm text-zinc-900 tracking-tight">
+                Recent Operations Activity
+              </h3>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Live caller updates, win-back attempts and reconciled claims
+              </p>
+            </div>
+
+            <span className="inline-flex items-center px-2 py-1 rounded-md text-[11px] font-mono font-semibold bg-zinc-900 text-white shrink-0">
+              {recentActivities.length} logs
+            </span>
           </div>
-        ) : (
-          <div className="divide-y divide-zinc-100 mt-3">
-            {recentActivities.map((act) => {
-              const IconComp = act.icon;
-              return (
-                <div 
-                  key={act.id} 
-                  className="py-3 flex items-center justify-between gap-3 group hover:bg-zinc-50/60 -mx-2 px-2 rounded-xl transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-700 shrink-0 group-hover:bg-zinc-200 transition-colors">
-                      <IconComp className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium text-xs text-zinc-900 flex items-center justify-between gap-2">
-                        <span className="truncate">{act.title}</span>
-                        <span className="text-[10.5px] font-medium text-zinc-400 shrink-0">
-                          {act.time}
-                        </span>
+
+          {/* List Rows or Clean Empty State */}
+          {recentActivities.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-8 text-center text-zinc-400">
+              <PhoneCall className="w-8 h-8 mx-auto mb-2 text-zinc-300 stroke-[1.5]" />
+              <p className="text-xs font-medium text-zinc-600">No calling activity logged yet</p>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Calls, win-back attempts and reconciled claims appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-100 mt-3">
+              {recentActivities.map((act) => {
+                const IconComp = act.icon;
+                return (
+                  <div
+                    key={act.id}
+                    className="py-3 flex items-center justify-between gap-3 group hover:bg-zinc-50/60 -mx-2 px-2 rounded-xl transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center text-zinc-700 shrink-0 group-hover:bg-zinc-200 transition-colors">
+                        <IconComp className="w-4 h-4" />
                       </div>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mt-0.5">
-                        <div className="text-[11px] text-zinc-500 truncate">
-                          {act.subtitle}
-                        </div>
-                        {act.device && (
-                          <span 
-                            className="inline-flex items-center gap-1 text-[9.5px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200/60 shrink-0 self-start sm:self-auto"
-                            title={`Logged via: ${act.device}`}
-                          >
-                            {act.deviceType === 'mobile' ? (
-                              <Smartphone className="w-2.5 h-2.5 text-zinc-400" />
-                            ) : act.deviceType === 'tablet' ? (
-                              <Tablet className="w-2.5 h-2.5 text-zinc-400" />
-                            ) : (
-                              <Laptop className="w-2.5 h-2.5 text-zinc-400" />
-                            )}
-                            <span className="truncate max-w-[120px]">{act.device}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-xs text-zinc-900 flex items-center justify-between gap-2">
+                          <span className="truncate">{act.title}</span>
+                          <span className="text-[10.5px] font-medium text-zinc-400 shrink-0">
+                            {act.time}
                           </span>
-                        )}
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mt-0.5">
+                          <div className="text-[11px] text-zinc-500 truncate">
+                            {act.subtitle}
+                          </div>
+                          {act.device && (
+                            <span
+                              className="inline-flex items-center gap-1 text-[9.5px] font-mono text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200/60 shrink-0 self-start sm:self-auto"
+                              title={`Logged via: ${act.device}`}
+                            >
+                              {act.deviceType === 'mobile' ? (
+                                <Smartphone className="w-2.5 h-2.5 text-zinc-400" />
+                              ) : act.deviceType === 'tablet' ? (
+                                <Tablet className="w-2.5 h-2.5 text-zinc-400" />
+                              ) : (
+                                <Laptop className="w-2.5 h-2.5 text-zinc-400" />
+                              )}
+                              <span className="truncate max-w-[120px]">{act.device}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-
     </div>
   );
 }
