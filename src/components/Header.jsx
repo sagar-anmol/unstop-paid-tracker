@@ -40,12 +40,12 @@ export default function Header({
   onOpenBookmarklet,
   onOpenTokenHealth,
   onOpenDeviceActivity,
-  onOpenNeonConfig,
   onOpenAntiGravityReport,
   onExportCSV,
   selectedDomainOverride,
   onSelectDomainOverride,
   verificationCount = 0,
+  disputeCount = 0,
   attendeeCount,
   theme,
   onToggleTheme,
@@ -68,7 +68,6 @@ export default function Header({
   }, []);
 
   const isSuperAdmin = currentUser?.role === 'super_admin';
-  const isDomainHead = currentUser?.role === 'domain_head';
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-zinc-200/80 transition-colors">
@@ -103,18 +102,25 @@ export default function Header({
               href="#candidates-table" 
               className="px-2.5 py-1 rounded-md hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
             >
-              Attendees ({Number(attendeeCount || summary?.total_unstop_registrations || summary?.totalCount || 4090).toLocaleString('en-IN')})
+              Attendees ({Number(attendeeCount || summary?.total_unstop_registrations || 0).toLocaleString('en-IN')})
             </a>
             <button
               onClick={onOpenVerificationQueue}
               className="px-2.5 py-1 rounded-md hover:text-zinc-900 hover:bg-zinc-50 transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <span>Verification</span>
-              {verificationCount > 0 && (
+              {disputeCount > 0 ? (
+                <span
+                  className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-rose-600 text-white font-semibold"
+                  title={`${disputeCount} claim(s) with no matching payment on techfest26.in`}
+                >
+                  {disputeCount}
+                </span>
+              ) : verificationCount > 0 ? (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-zinc-900 text-white font-semibold">
                   {verificationCount}
                 </span>
-              )}
+              ) : null}
             </button>
             {isSuperAdmin && (
               <>
@@ -347,17 +353,6 @@ export default function Header({
                     >
                       <ShieldCheck className="w-4 h-4 text-zinc-600 shrink-0" />
                       <span>Autonomous OAuth Health</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        onOpenNeonConfig();
-                      }}
-                      className="w-full px-3.5 py-2 text-left text-xs text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 transition-colors flex items-center gap-2.5 cursor-pointer"
-                    >
-                      <Database className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Neon Cloud DB Settings</span>
                     </button>
                   </div>
                 )}

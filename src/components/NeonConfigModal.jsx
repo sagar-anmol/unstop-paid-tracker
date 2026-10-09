@@ -19,8 +19,7 @@ import { Input } from "@/components/ui/input";
 import { 
   getActiveDatabaseUrl, 
   setActiveDatabaseUrl, 
-  testNeonConnection, 
-  dbStatus 
+  testNeonConnection
 } from '../utils/neonDb';
 
 export default function NeonConfigModal({ isOpen, onClose, onTriggerToast }) {

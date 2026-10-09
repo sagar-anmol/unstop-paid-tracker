@@ -53,6 +53,7 @@ export function applyParticipantOverrides(participants) {
       merged.payment_status = ovr.payment_status;
       merged.is_paid = ovr.payment_status === 'PAID';
       merged.is_refunded = ovr.payment_status === 'REFUNDED';
+      merged.is_cancelled = ovr.payment_status === 'CANCELLED';
     }
     if (ovr.amount !== undefined && ovr.amount !== null && ovr.amount !== '') {
       merged.amount = Number(ovr.amount);
@@ -68,6 +69,17 @@ export function applyParticipantOverrides(participants) {
     }
     if (ovr.admin_note) {
       merged.admin_note = ovr.admin_note;
+    }
+    // Cancellation win-back outcome recorded by the calling desk
+    if (ovr.is_cancelled !== undefined) {
+      merged.is_cancelled = Boolean(ovr.is_cancelled);
+      merged.cancel_reverted = Boolean(ovr.cancel_reverted);
+    }
+    if (ovr.cancel_reason !== undefined) {
+      merged.cancel_reason = ovr.cancel_reason;
+    }
+    if (ovr.status_label) {
+      merged.status_label = ovr.status_label;
     }
 
     merged._hasCustomOverride = true;

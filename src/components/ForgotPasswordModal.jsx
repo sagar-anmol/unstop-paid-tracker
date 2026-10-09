@@ -9,7 +9,6 @@ import {
   Mail
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { DEFAULT_INITIAL_PASSWORD } from '../utils/auth';
 
 export default function ForgotPasswordModal({ 
   isOpen, 
@@ -17,10 +16,10 @@ export default function ForgotPasswordModal({
 }) {
   if (!isOpen) return null;
 
-  const waRajMsg = "Hi Raj Aryan, I forgot my techFEST '26 portal password. Please reset my account password to default (Techfest@2026).";
+  const waRajMsg = "Hi Raj Aryan, I forgot my techFEST '26 portal password. Please reset my account from the Central Desk Password Manager.";
   const waRajUrl = `https://wa.me/919288522520?text=${encodeURIComponent(waRajMsg)}`;
 
-  const waSagarMsg = "Hi Sagar bhaiya, I forgot my techFEST '26 portal password. Please reset my account password to default (Techfest@2026).";
+  const waSagarMsg = "Hi Sagar bhaiya, I forgot my techFEST '26 portal password. Please reset my account from the Central Desk Password Manager.";
   const waSagarUrl = `https://wa.me/917366879486?text=${encodeURIComponent(waSagarMsg)}`;
 
   return (
@@ -64,7 +63,7 @@ export default function ForgotPasswordModal({
             <div>
               <span className="font-semibold block mb-0.5">Central Security Policy:</span>
               <span>
-                All organizer accounts are protected. If you forgot your password, contact Central Desk Admins directly below to reset your account back to <strong className="font-mono text-amber-950">{DEFAULT_INITIAL_PASSWORD}</strong>.
+                All organizer accounts are protected and passwords are stored only as salted hashes. If you forgot your password, contact Central Desk Admins directly below to have it reset.
               </span>
             </div>
           </div>

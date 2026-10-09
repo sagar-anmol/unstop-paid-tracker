@@ -1,3 +1,5 @@
+import { isParticipantCancelled } from './paymentUtils';
+
 export function exportParticipantsToCSV(participants) {
   if (!participants || participants.length === 0) {
     alert("No participant records available to export.");
@@ -20,6 +22,10 @@ export function exportParticipantsToCSV(participants) {
     "Team Members Details",
     "Amount Paid",
     "Payment Status",
+    "Cancelled",
+    "Cancellation Date",
+    "Cancellation Reason",
+    "Won Back",
     "Registration Date",
     "Resume URL"
   ];
@@ -55,7 +61,11 @@ export function exportParticipantsToCSV(participants) {
       p.team_size || 1,
       escapeCSV(memberDetails),
       p.amount !== undefined ? p.amount : 0,
-      escapeCSV(p.payment_status || "PAID"),
+      escapeCSV(p.payment_status || "UNPAID"),
+      isParticipantCancelled(p) ? "YES" : "NO",
+      escapeCSV(p.cancelled_at || ""),
+      escapeCSV(p.cancel_reason || ""),
+      isParticipantCancelled(p) && p.cancel_reverted ? "YES" : "NO",
       escapeCSV(p.registered_at || "N/A"),
       escapeCSV(p.resume_url || "")
     ].join(",");

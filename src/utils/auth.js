@@ -2,8 +2,12 @@
 // TechFEST '26 Role-Based Access Control (RBAC), 13 Domains Directory & Official Logins
 import { 
   fetchCustomPasswordsFromNeon, 
-  writeCustomPasswordToNeon, 
-  deleteCustomPasswordFromNeon 
+  writeCustomPasswordHashToNeon, 
+  deleteCustomPasswordFromNeon,
+  fetchPanelUsersFromNeon,
+  writePanelUserToNeon,
+  setPanelUserActiveInNeon,
+  deletePanelUserFromNeon
 } from './neonDb.js';
 import { recordLoginSession } from './device.js';
 
@@ -257,7 +261,11 @@ export const DOMAINS_DIRECTORY = {
   }
 };
 
+// Shared initial password for the hardcoded accounts. Every account is forced to
+// replace it at first sign-in. Runtime accounts created from the Team tab use
+// NEW_ACCOUNT_INITIAL_PASSWORD and get the same forced change.
 export const DEFAULT_INITIAL_PASSWORD = 'Techfest@2026';
+export const NEW_ACCOUNT_INITIAL_PASSWORD = 'techfest@123';
 
 // OFFICIAL ACCOUNTS (2 Admins + 1 WebDev + 1 Outreach Desk + 13 Domain Leads)
 export const OFFICIAL_ACCOUNTS = [
@@ -558,8 +566,97 @@ export const OFFICIAL_ACCOUNTS = [
 ];
 
 const SESSION_STORAGE_KEY = 'tf_auth_session_v5';
-const CUSTOM_PASSWORDS_KEY = 'tf_custom_passwords_v3';
+const CUSTOM_PASSWORDS_KEY = 'tf_custom_passwords_v4_hashed';
+const DYNAMIC_USERS_KEY = 'tf_panel_users_cache';
+const HASH_ALGO = 'SHA-256';
 
+// Legacy plaintext store from before hashing was introduced. Read-only, used to
+// migrate old entries to hashes and then discarded.
+const LEGACY_CUSTOM_PASSWORDS_KEY = 'tf_custom_passwords_v3';
+
+/**
+ * SHA-256 helper. Uses WebCrypto when available and falls back to a pure-JS
+ * implementation so hashing still works over plain HTTP (GitHub Pages).
+ */
+async function sha256Hex(message) {
+  if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
+    const data = new TextEncoder().encode(message);
+    const digest = await crypto.subtle.digest(HASH_ALGO, data);
+    return Array.from(new Uint8Array(digest))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  return sha256HexFallback(message);
+}
+
+// Minimal synchronous SHA-256, only used when crypto.subtle is unavailable.
+function sha256HexFallback(message) {
+  const K = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+  ];
+  const utf8 = unescape(encodeURIComponent(message));
+  const bytes = [];
+  for (let i = 0; i < utf8.length; i++) bytes.push(utf8.charCodeAt(i) & 0xff);
+  const bitLen = bytes.length * 8;
+  bytes.push(0x80);
+  while (bytes.length % 64 !== 56) bytes.push(0);
+  for (let i = 7; i >= 0; i--) bytes.push((bitLen / Math.pow(2, i * 8)) & 0xff);
+
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const w = new Array(64);
+
+  for (let i = 0; i < bytes.length; i += 64) {
+    for (let t = 0; t < 16; t++) {
+      w[t] = (bytes[i + t * 4] << 24) | (bytes[i + t * 4 + 1] << 16) | (bytes[i + t * 4 + 2] << 8) | bytes[i + t * 4 + 3];
+    }
+    for (let t = 16; t < 64; t++) {
+      const s0 = (((w[t - 15] >>> 7) | (w[t - 15] << 25)) ^ ((w[t - 15] >>> 18) | (w[t - 15] << 14)) ^ (w[t - 15] >>> 3)) >>> 0;
+      const s1 = (((w[t - 2] >>> 17) | (w[t - 2] << 15)) ^ ((w[t - 2] >>> 19) | (w[t - 2] << 13)) ^ (w[t - 2] >>> 10)) >>> 0;
+      w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let t = 0; t < 64; t++) {
+      const S1 = (((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7))) >>> 0;
+      const ch = ((e & f) ^ (~e & g)) >>> 0;
+      const temp1 = (h + S1 + ch + K[t] + w[t]) >>> 0;
+      const S0 = (((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10))) >>> 0;
+      const maj = ((a & b) ^ (a & c) ^ (b & c)) >>> 0;
+      const temp2 = (S0 + maj) >>> 0;
+      h = g; g = f; f = e; e = (d + temp1) >>> 0;
+      d = c; c = b; b = a; a = (temp1 + temp2) >>> 0;
+    }
+    H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0; H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+    H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0; H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
+  }
+  return H.map(x => x.toString(16).padStart(8, '0')).join('');
+}
+
+export function generateSalt() {
+  const arr = new Uint8Array(16);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(arr);
+  } else {
+    for (let i = 0; i < 16; i++) arr[i] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function hashPassword(password, salt) {
+  return sha256Hex(`${salt}:${password}`);
+}
+
+/**
+ * Returns the stored credential record for a username.
+ * Shape: { hash, salt, mustChange } for hashed entries, or a bare string for
+ * legacy plaintext entries that have not been migrated yet.
+ */
 export function getCustomPasswords() {
   try {
     const raw = localStorage.getItem(CUSTOM_PASSWORDS_KEY);
@@ -578,19 +675,259 @@ export function saveCustomPasswords(passwords) {
   }
 }
 
-export function getPasswordForAccount(username) {
-  const custom = getCustomPasswords();
-  const clean = username.toLowerCase().trim();
-  if (custom[clean]) return custom[clean];
+/**
+ * Reads legacy plaintext passwords and re-hashes them. Runs once per device;
+ * afterwards the legacy key is removed so plaintext is not retained.
+ */
+export async function migrateLegacyPasswords() {
+  let legacy = null;
+  try {
+    const raw = localStorage.getItem(LEGACY_CUSTOM_PASSWORDS_KEY);
+    if (raw) legacy = JSON.parse(raw);
+  } catch (e) {
+    return { migrated: 0 };
+  }
+  if (!legacy || typeof legacy !== 'object') return { migrated: 0 };
 
-  const acc = OFFICIAL_ACCOUNTS.find(a => 
-    a.username.toLowerCase() === clean || 
+  const current = getCustomPasswords();
+  let migrated = 0;
+
+  for (const [username, value] of Object.entries(legacy)) {
+    const clean = String(username).toLowerCase().trim();
+    if (!clean) continue;
+    // Never clobber an existing hash with the older plaintext value
+    if (current[clean]) continue;
+    if (typeof value !== 'string') continue;
+    const salt = generateSalt();
+    current[clean] = { hash: await hashPassword(value, salt), salt, mustChange: false };
+    migrated++;
+  }
+
+  if (migrated > 0) saveCustomPasswords(current);
+  try {
+    localStorage.removeItem(LEGACY_CUSTOM_PASSWORDS_KEY);
+  } catch (e) {
+    // non-fatal
+  }
+  return { migrated };
+}
+
+export function getDynamicUsers() {
+  try {
+    const raw = localStorage.getItem(DYNAMIC_USERS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.error('Error loading dynamic users:', e);
+  }
+  return [];
+}
+
+export function saveDynamicUsers(users) {
+  try {
+    localStorage.setItem(DYNAMIC_USERS_KEY, JSON.stringify(Array.isArray(users) ? users : []));
+  } catch (e) {
+    console.error('Error saving dynamic users:', e);
+  }
+}
+
+/**
+ * Official accounts always take precedence over dynamically added users, so a
+ * runtime-created account can never shadow Raj, Sagar, or the 13 domain heads.
+ */
+export function getAllAccounts() {
+  const official = OFFICIAL_ACCOUNTS;
+  const officialKeys = new Set(official.map(a => a.username.toLowerCase()));
+  const dynamic = getDynamicUsers().filter(u => !officialKeys.has(String(u.username).toLowerCase()));
+  return [...official, ...dynamic];
+}
+
+export function findAnyAccount(predicate) {
+  return getAllAccounts().find(predicate) || null;
+}
+
+export function findAccount(username) {
+  const clean = String(username || '').toLowerCase().trim();
+  if (!clean) return null;
+  return findAnyAccount(a =>
+    a.username.toLowerCase() === clean ||
     (a.aliasUsername && a.aliasUsername.toLowerCase() === clean) ||
     (a.email && a.email.toLowerCase() === clean) ||
     a.username.split('@')[0].toLowerCase() === clean
   );
+}
 
+export function getPasswordForAccount(username) {
+  const custom = getCustomPasswords();
+  const clean = username.toLowerCase().trim();
+  const entry = custom[clean];
+  if (typeof entry === 'string') return entry;
+
+  const acc = findAccount(username);
   return acc?.defaultPassword || DEFAULT_INITIAL_PASSWORD;
+}
+
+/**
+ * Verifies a plaintext password against the stored credential for an account.
+ * Handles hashed entries, legacy plaintext entries, and default passwords.
+ */
+export async function verifyAccountPassword(account, plaintext) {
+  const clean = account.username.toLowerCase().trim();
+  const entry = getCustomPasswords()[clean];
+
+  if (entry && typeof entry === 'object' && entry.hash) {
+    const candidate = await hashPassword(plaintext, entry.salt);
+    return candidate === entry.hash;
+  }
+
+  if (typeof entry === 'string') {
+    return plaintext === entry;
+  }
+
+  const expected = account.defaultPassword || DEFAULT_INITIAL_PASSWORD;
+  return plaintext === expected ||
+    plaintext === DEFAULT_INITIAL_PASSWORD ||
+    plaintext === 'sliet@2026' ||
+    plaintext === `${account.username}@sliet` ||
+    Boolean(account.aliasUsername && plaintext === `${account.aliasUsername}@sliet`);
+}
+
+/**
+ * Loads runtime-managed panel users from Neon and caches them locally.
+ * Called on app boot; failures leave the hardcoded directory intact.
+ */
+export async function loadDynamicUsers() {
+  try {
+    const users = await fetchPanelUsersFromNeon();
+    if (Array.isArray(users)) {
+      saveDynamicUsers(users);
+      return users;
+    }
+  } catch (e) {
+    console.error('Error loading panel users from Neon:', e);
+  }
+  return getDynamicUsers();
+}
+
+/**
+ * Creates or updates a runtime-managed user. Super-admin only.
+ * The initial password is hashed and flagged mustChange so the account is
+ * forced to set its own password on first login.
+ */
+export async function upsertPanelUser(adminUser, userInput) {
+  if (!adminUser || adminUser.role !== 'super_admin') {
+    throw new Error('Unauthorized: only Super Admins can manage team accounts.');
+  }
+  const {
+    username,
+    displayName,
+    role = 'operations_calling',
+    domainId = 'ALL',
+    teamName = 'Central Operations',
+    email = '',
+    phone = '',
+    canVerifyPayments = false,
+    initialPassword,
+    notes = ''
+  } = userInput || {};
+
+  const clean = String(username || '').toLowerCase().trim();
+  if (!clean || !clean.includes('@') && !/^[a-z0-9._-]{3,}$/i.test(clean)) {
+    throw new Error('Username must be an email address or a 3+ character handle.');
+  }
+  if (!displayName || !String(displayName).trim()) {
+    throw new Error('Display name is required.');
+  }
+  if (!['super_admin', 'webdev', 'operations_calling', 'domain_head'].includes(role)) {
+    throw new Error('Unknown role.');
+  }
+
+  // Hardcoded accounts are managed in code and must not be shadowed
+  const official = OFFICIAL_ACCOUNTS.find(a => a.username.toLowerCase() === clean);
+  if (official) {
+    throw new Error(`"${official.username}" is an official account and cannot be added here.`);
+  }
+
+  const record = {
+    username: clean,
+    displayName: String(displayName).trim(),
+    role,
+    domainId: role === 'domain_head' ? (domainId || 'ALL') : 'ALL',
+    teamName,
+    email: String(email || '').trim(),
+    phone: String(phone || '').trim(),
+    canVerifyPayments: Boolean(canVerifyPayments),
+    isActive: true,
+    notes: String(notes || '').trim()
+  };
+
+  const existing = getDynamicUsers().find(u => String(u.username).toLowerCase() === clean);
+  const next = {
+    ...record,
+    createdBy: existing?.createdBy || adminUser.username,
+    createdAt: existing?.createdAt || new Date().toISOString()
+  };
+
+  // Initial password: store a hash, force a change on first login
+  if (initialPassword && String(initialPassword).trim().length >= 4) {
+    const salt = generateSalt();
+    const hash = await hashPassword(String(initialPassword).trim(), salt);
+    const custom = getCustomPasswords();
+    custom[clean] = { hash, salt, mustChange: true };
+    saveCustomPasswords(custom);
+    await writeCustomPasswordHashToNeon(clean, hash, salt, true, adminUser.username);
+  }
+
+  const saved = await writePanelUserToNeon(next);
+  const users = getDynamicUsers().filter(u => String(u.username).toLowerCase() !== clean);
+  users.push(next);
+  saveDynamicUsers(users);
+
+  return saved || next;
+}
+
+export async function deactivatePanelUser(adminUser, username) {
+  if (!adminUser || adminUser.role !== 'super_admin') {
+    throw new Error('Unauthorized: only Super Admins can manage team accounts.');
+  }
+  const clean = String(username || '').toLowerCase().trim();
+  const users = getDynamicUsers().map(u =>
+    String(u.username).toLowerCase() === clean ? { ...u, isActive: false } : u
+  );
+  saveDynamicUsers(users);
+  await setPanelUserActiveInNeon(clean, false);
+  return true;
+}
+
+export async function reactivatePanelUser(adminUser, username) {
+  if (!adminUser || adminUser.role !== 'super_admin') {
+    throw new Error('Unauthorized: only Super Admins can manage team accounts.');
+  }
+  const clean = String(username || '').toLowerCase().trim();
+  const users = getDynamicUsers().map(u =>
+    String(u.username).toLowerCase() === clean ? { ...u, isActive: true } : u
+  );
+  saveDynamicUsers(users);
+  await setPanelUserActiveInNeon(clean, true);
+  return true;
+}
+
+export async function removePanelUser(adminUser, username) {
+  if (!adminUser || adminUser.role !== 'super_admin') {
+    throw new Error('Unauthorized: only Super Admins can manage team accounts.');
+  }
+  const clean = String(username || '').toLowerCase().trim();
+  saveDynamicUsers(getDynamicUsers().filter(u => String(u.username).toLowerCase() !== clean));
+
+  const custom = getCustomPasswords();
+  delete custom[clean];
+  saveCustomPasswords(custom);
+
+  await deletePanelUserFromNeon(clean);
+  await deleteCustomPasswordFromNeon(clean);
+  return true;
 }
 
 /**
@@ -600,26 +937,36 @@ export function isUserUsingDefaultPassword(username) {
   if (!username) return false;
   const custom = getCustomPasswords();
   const clean = username.toLowerCase().trim();
-  const currentPass = custom[clean];
-  return !currentPass || currentPass === DEFAULT_INITIAL_PASSWORD || currentPass === 'sliet@2026';
+  const entry = custom[clean];
+
+  if (entry && typeof entry === 'object') {
+    return Boolean(entry.mustChange);
+  }
+  if (typeof entry === 'string') {
+    return entry === DEFAULT_INITIAL_PASSWORD || entry === 'sliet@2026';
+  }
+  return true;
 }
 
 /**
- * Allows the active user to set their personal new password
+ * Allows the active user to set their personal new password.
+ * Stores a salted SHA-256 hash and clears the forced-change flag.
  */
-export function updateUserOwnPassword(username, newPassword) {
+export async function updateUserOwnPassword(username, newPassword) {
   if (!username || !newPassword || newPassword.trim().length < 4) {
     throw new Error('Password must be at least 4 characters long.');
   }
 
   const clean = username.toLowerCase().trim();
+  const salt = generateSalt();
+  const hash = await hashPassword(newPassword.trim(), salt);
+
   const custom = getCustomPasswords();
-  custom[clean] = newPassword.trim();
+  custom[clean] = { hash, salt, mustChange: false };
   saveCustomPasswords(custom);
 
-  // Background cloud sync to Neon
-  writeCustomPasswordToNeon(clean, newPassword.trim(), clean)
-    .catch(e => console.error('Neon writeCustomPassword note:', e));
+  writeCustomPasswordHashToNeon(clean, hash, salt, false, clean)
+    .catch(e => console.error('Neon writeCustomPasswordHash note:', e));
 
   return true;
 }
@@ -641,15 +988,40 @@ export function isSuperAdmin(user) {
 }
 
 /**
- * Sync custom passwords from Neon PostgreSQL
+ * Sync credential hashes from Neon PostgreSQL.
+ * Plaintext legacy rows are converted to hashes on arrival so plaintext is
+ * never persisted locally.
  */
 export async function syncPasswordsWithNeon() {
   try {
+    await migrateLegacyPasswords();
+
     const cloudPasswords = await fetchCustomPasswordsFromNeon();
     if (cloudPasswords && Object.keys(cloudPasswords).length > 0) {
       const local = getCustomPasswords();
-      const merged = { ...local, ...cloudPasswords };
-      saveCustomPasswords(merged);
+      let converted = 0;
+
+      const incoming = {};
+      for (const [username, value] of Object.entries(cloudPasswords)) {
+        const clean = String(username).toLowerCase().trim();
+        if (!clean) continue;
+
+        if (value && typeof value === 'object' && value.hash) {
+          incoming[clean] = value;
+          continue;
+        }
+
+        if (typeof value === 'string' && value) {
+          const salt = generateSalt();
+          incoming[clean] = { hash: await hashPassword(value, salt), salt, mustChange: false };
+          converted++;
+        }
+      }
+
+      saveCustomPasswords({ ...local, ...incoming });
+      if (converted > 0) {
+        console.info(`Migrated ${converted} plaintext password(s) from Neon to hashed form.`);
+      }
     }
   } catch (err) {
     console.error('Error syncing passwords with Neon:', err);
@@ -670,7 +1042,7 @@ export function hasAccountCustomPassword(username) {
  * Super Admin Password Reset Tool
  * Allows Raj and Sagar to change/reset passwords for any account
  */
-export function setAccountPassword(adminUser, targetUsername, newPassword) {
+export async function setAccountPassword(adminUser, targetUsername, newPassword, mustChange = true) {
   if (!adminUser || adminUser.role !== 'super_admin') {
     throw new Error('Unauthorized: Only Super Admins (Raj & Sagar) can reset passwords.');
   }
@@ -679,13 +1051,16 @@ export function setAccountPassword(adminUser, targetUsername, newPassword) {
   }
 
   const clean = targetUsername.toLowerCase().trim();
+  const salt = generateSalt();
+  const hash = await hashPassword(newPassword.trim(), salt);
+
   const custom = getCustomPasswords();
-  custom[clean] = newPassword.trim();
+  custom[clean] = { hash, salt, mustChange };
   saveCustomPasswords(custom);
 
   // Background Cloud Sync to Neon PostgreSQL
-  writeCustomPasswordToNeon(clean, newPassword.trim(), adminUser.username)
-    .catch(e => console.error('Neon writeCustomPassword error:', e));
+  writeCustomPasswordHashToNeon(clean, hash, salt, mustChange, adminUser.username)
+    .catch(e => console.error('Neon writeCustomPasswordHash error:', e));
 
   return true;
 }
@@ -712,39 +1087,32 @@ export function resetAccountPasswordToDefault(adminUser, targetUsername) {
  * and resets or changes any domain coordinator's password.
  * Can be called from Login Screen or Admin Settings.
  */
-export function adminAuthorizeAndResetPassword(adminIdentifier, adminPassword, targetUsername, newPassword = null) {
+export async function adminAuthorizeAndResetPassword(adminIdentifier, adminPassword, targetUsername, newPassword = null) {
   const cleanAdmin = (adminIdentifier || '').toLowerCase().trim();
   const cleanAdminPass = (adminPassword || '').trim();
 
-  // Find admin account
-  const adminAcc = OFFICIAL_ACCOUNTS.find(a => 
-    a.role === 'super_admin' && 
-    (a.username.toLowerCase() === cleanAdmin || a.email.toLowerCase() === cleanAdmin)
+  // Find admin account (official accounts plus any dynamically added admins)
+  const adminAcc = findAnyAccount(a =>
+    a.role === 'super_admin' &&
+    (a.username.toLowerCase() === cleanAdmin || (a.email || '').toLowerCase() === cleanAdmin)
   );
 
   if (!adminAcc) {
-    throw new Error('Access Denied: Only Super Admins (sagaranmol@gmail.com, raj.aryan@gmail.com) can authorize resets.');
+    throw new Error('Access Denied: Only Super Admins can authorize resets.');
   }
 
-  // Verify Admin password
-  const expectedAdminPass = getPasswordForAccount(adminAcc.username);
-  const customPasswords = getCustomPasswords();
-  const adminHasCustom = Boolean(customPasswords[adminAcc.username.toLowerCase()]);
-  
-  const isAdminMatch = adminHasCustom 
-    ? (cleanAdminPass === expectedAdminPass)
-    : (cleanAdminPass === expectedAdminPass || cleanAdminPass === DEFAULT_INITIAL_PASSWORD || cleanAdminPass === 'sliet@2026');
-
+  // Verify Admin password against stored hash / default
+  const isAdminMatch = await verifyAccountPassword(adminAcc, cleanAdminPass);
   if (!isAdminMatch) {
     throw new Error('Invalid Admin Password. Please verify your credentials.');
   }
 
-  // Find target account
+  // Find target account (official plus dynamic users)
   const cleanTarget = (targetUsername || '').toLowerCase().trim();
-  const targetAcc = OFFICIAL_ACCOUNTS.find(a => 
-    a.username.toLowerCase() === cleanTarget || 
+  const targetAcc = findAnyAccount(a =>
+    a.username.toLowerCase() === cleanTarget ||
     (a.aliasUsername && a.aliasUsername.toLowerCase() === cleanTarget) ||
-    (a.email && a.email.toLowerCase() === cleanTarget)
+    ((a.email || '').toLowerCase() === cleanTarget)
   );
 
   if (!targetAcc) {
@@ -753,15 +1121,18 @@ export function adminAuthorizeAndResetPassword(adminIdentifier, adminPassword, t
 
   let finalPassword = '';
   const isSettingCustom = Boolean(newPassword && newPassword.trim().length >= 4);
+  const customPasswords = getCustomPasswords();
 
   if (isSettingCustom) {
     finalPassword = newPassword.trim();
-    customPasswords[targetAcc.username.toLowerCase()] = finalPassword;
+    const salt = generateSalt();
+    const hash = await hashPassword(finalPassword, salt);
+    customPasswords[targetAcc.username.toLowerCase()] = { hash, salt, mustChange: true };
     saveCustomPasswords(customPasswords);
 
     // Background Cloud Sync to Neon PostgreSQL
-    writeCustomPasswordToNeon(targetAcc.username.toLowerCase(), finalPassword, adminAcc.username)
-      .catch(e => console.error('Neon writeCustomPassword error:', e));
+    writeCustomPasswordHashToNeon(targetAcc.username.toLowerCase(), hash, salt, true, adminAcc.username)
+      .catch(e => console.error('Neon writeCustomPasswordHash error:', e));
   } else {
     // Reset to initial default
     delete customPasswords[targetAcc.username.toLowerCase()];
@@ -816,11 +1187,11 @@ export function clearActiveUser() {
 }
 
 /**
- * Authenticates user credentials against official accounts and custom passwords.
- * If user has set a custom password, only that custom password is valid.
- * If user is still on default, accepts default initial password.
+ * Authenticates a user against the hardcoded directory plus any
+ * runtime-managed panel users. Compares salted SHA-256 hashes where present
+ * and falls back to default-password matching for untouched accounts.
  */
-export function authenticateUser(usernameInput, passwordInput) {
+export async function authenticateUser(usernameInput, passwordInput) {
   if (!usernameInput || !passwordInput) {
     return { success: false, error: 'Please enter both email/username and password.' };
   }
@@ -828,46 +1199,53 @@ export function authenticateUser(usernameInput, passwordInput) {
   const cleanUser = usernameInput.trim().toLowerCase();
   const cleanPass = passwordInput.trim();
 
-  const account = OFFICIAL_ACCOUNTS.find(acc => 
-    acc.username.toLowerCase() === cleanUser || 
-    (acc.aliasUsername && acc.aliasUsername.toLowerCase() === cleanUser) ||
-    (acc.email && acc.email.toLowerCase() === cleanUser) ||
-    acc.username.split('@')[0].toLowerCase() === cleanUser
-  );
+  await migrateLegacyPasswords();
+
+  const account = findAccount(cleanUser);
 
   if (!account) {
-    return { 
-      success: false, 
-      error: `Account "${cleanUser}" not found. Enter your official coordinator email (e.g. sumitbansal1290@gmail.com, sagaranmol@gmail.com).` 
+    return {
+      success: false,
+      error: `Account "${cleanUser}" not found. Enter your official coordinator email or your assigned username.`
     };
   }
 
-  const expectedPassword = getPasswordForAccount(account.username);
-  const isCustomSet = hasAccountCustomPassword(account.username);
-
-  // If a custom password has been set, only accept the custom password.
-  // If no custom password has been set (still default), accept DEFAULT_INITIAL_PASSWORD or legacy sliet@2026.
-  let isMatch = false;
-  if (isCustomSet) {
-    isMatch = (cleanPass === expectedPassword);
-  } else {
-    isMatch = (cleanPass === expectedPassword) || 
-              (cleanPass === DEFAULT_INITIAL_PASSWORD) ||
-              (cleanPass === 'sliet@2026') ||
-              (cleanPass === `${account.username}@sliet`) ||
-              (account.aliasUsername && cleanPass === `${account.aliasUsername}@sliet`);
-  }
+  const isMatch = await verifyAccountPassword(account, cleanPass);
 
   if (!isMatch) {
-    return { 
-      success: false, 
-      error: isCustomSet 
-        ? `Incorrect password for ${account.name}. If you forgot your password, contact Central Desk Admins (Sagar/Raj) to reset it.`
-        : `Incorrect password for ${account.name}. Default initial password is "${DEFAULT_INITIAL_PASSWORD}".` 
+    const who = account.name || account.displayName || account.username;
+    return {
+      success: false,
+      error: `Incorrect password for ${who}. If you forgot your password, contact Central Desk Admins to reset it.`
     };
   }
 
-  return { success: true, user: account };
+  return { success: true, user: normalizeUserShape(account) };
+}
+
+/**
+ * Runtime-managed users store display_name / can_verify_payments, while the
+ * hardcoded accounts use name / role conventions. Present a single shape.
+ */
+export function normalizeUserShape(account) {
+  if (!account) return null;
+  const isDynamic = account.displayName !== undefined;
+  const label = account.name || account.displayName || account.username;
+  return {
+    username: account.username,
+    name: label,
+    displayName: label,
+    role: account.role,
+    domainId: account.domainId || 'ALL',
+    domainName: account.domainName || null,
+    teamName: account.teamName || 'Central Operations',
+    email: account.email || '',
+    title: account.title || null,
+    avatar: account.avatar || label.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase(),
+    canVerifyPayments: Boolean(account.canVerifyPayments),
+    mustChangePassword: isUserUsingDefaultPassword(account.username),
+    isDynamic
+  };
 }
 
 /**
@@ -887,13 +1265,13 @@ export function getDomainForEvent(eventName) {
   const target = eventName.toLowerCase().trim();
 
   // 1. Direct exact match on canonical official events across all domains
-  for (const [dId, dInfo] of Object.entries(DOMAINS_DIRECTORY)) {
+  for (const dInfo of Object.values(DOMAINS_DIRECTORY)) {
     const match = dInfo.events.some(ev => target === ev.toLowerCase().trim());
     if (match) return dInfo;
   }
 
   // 2. Direct exact match on aliases across all domains
-  for (const [dId, dInfo] of Object.entries(DOMAINS_DIRECTORY)) {
+  for (const dInfo of Object.values(DOMAINS_DIRECTORY)) {
     if (dInfo.aliases && Array.isArray(dInfo.aliases)) {
       const match = dInfo.aliases.some(ev => target === ev.toLowerCase().trim());
       if (match) return dInfo;
@@ -901,7 +1279,7 @@ export function getDomainForEvent(eventName) {
   }
 
   // 3. Fallback substring match across all events and aliases
-  for (const [dId, dInfo] of Object.entries(DOMAINS_DIRECTORY)) {
+  for (const dInfo of Object.values(DOMAINS_DIRECTORY)) {
     const allEvents = [...dInfo.events, ...(dInfo.aliases || [])];
     const match = allEvents.some(ev => {
       const evLower = ev.toLowerCase().trim();

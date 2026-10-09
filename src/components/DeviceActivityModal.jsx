@@ -1,5 +1,5 @@
 // src/components/DeviceActivityModal.jsx
-// Instagram-style "Where You're Logged In" Device & Location Activity Center
+// "Where You're Logged In" — device and last known location for this account
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
@@ -14,9 +14,7 @@ import {
   RotateCw, 
   LogOut, 
   AlertTriangle,
-  Info,
-  Radio,
-  Monitor
+  Info
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +25,7 @@ import {
   fetchCloudLoginSessions,
   terminateLoginSession 
 } from '../utils/device';
+import { isDatabaseConfigured } from '../utils/neonDb';
 
 export default function DeviceActivityModal({ isOpen, onClose, currentUser }) {
   const [deviceInfo, setDeviceInfo] = useState(() => getDeviceInfo());
@@ -35,22 +34,23 @@ export default function DeviceActivityModal({ isOpen, onClose, currentUser }) {
   const [actionNotice, setActionNotice] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      setDeviceInfo(getDeviceInfo());
-      setSessions(getActiveLoginSessions());
+    if (!isOpen) return;
 
-      // Fetch cloud sessions from Neon DB
+    setDeviceInfo(getDeviceInfo());
+    setSessions(getActiveLoginSessions());
+
+    // Cross-device visibility only exists when a database is configured.
+    if (isDatabaseConfigured()) {
       fetchCloudLoginSessions().then(cloudSessions => {
         if (cloudSessions && cloudSessions.length > 0) {
           setSessions(cloudSessions);
         }
       });
-
-      // Refresh live IP and location in background
-      fetchNetworkLocationInfo(false).then(() => {
-        setDeviceInfo(getDeviceInfo());
-      });
     }
+
+    fetchNetworkLocationInfo(false).then(() => {
+      setDeviceInfo(getDeviceInfo());
+    });
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -61,23 +61,34 @@ export default function DeviceActivityModal({ isOpen, onClose, currentUser }) {
     try {
       await fetchNetworkLocationInfo(true);
       setDeviceInfo(getDeviceInfo());
-      const cloud = await fetchCloudLoginSessions();
-      if (cloud && cloud.length > 0) {
-        setSessions(cloud);
+
+      if (isDatabaseConfigured()) {
+        const cloud = await fetchCloudLoginSessions();
+        if (cloud && cloud.length > 0) setSessions(cloud);
       }
-      setActionNotice('Live network IP and cloud devices synchronized.');
-      setTimeout(() => setActionNotice(''), 4000);
+
+      setActionNotice('Live network IP refreshed.');
     } catch (e) {
-      setActionNotice('Location updated from current network profile.');
+      setActionNotice('Location updated from the current network profile.');
     } finally {
       setIsRefreshing(false);
+      setTimeout(() => setActionNotice(''), 4000);
     }
   };
+
+  // Terminating a session only clears the row in Neon. Sign-in runs in the
+  // browser, so there is no server-side session to invalidate; the message says
+  // so rather than implying the device was locked out.
+  const dbConfigured = isDatabaseConfigured();
 
   const handleTerminateSession = (sessionId, deviceName) => {
     const updated = terminateLoginSession(sessionId);
     setSessions(updated);
-    setActionNotice(`Session for ${deviceName} was signed out.`);
+    setActionNotice(
+      dbConfigured
+        ? `Session record for ${deviceName} was closed. Ask them to sign in again.`
+        : `Removed ${deviceName} from this device's list. No cloud record exists without a database.`
+    );
     setTimeout(() => setActionNotice(''), 4000);
   };
 
@@ -100,7 +111,7 @@ export default function DeviceActivityModal({ isOpen, onClose, currentUser }) {
                 Where You're Logged In
               </h2>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Device activity & physical location tracking (TechFEST '26)
+                Device activity and last known location for this account
               </p>
             </div>
           </div>
@@ -215,7 +226,7 @@ export default function DeviceActivityModal({ isOpen, onClose, currentUser }) {
                 Other Recognized Devices
               </span>
               <span className="text-[11px] text-zinc-400 font-mono">
-                {sessions.length} recorded
+                {sessions.length} recorded{dbConfigured ? '' : ' (this device only)'}
               </span>
             </div>
 
@@ -224,7 +235,11 @@ export default function DeviceActivityModal({ isOpen, onClose, currentUser }) {
                 <div className="p-6 text-center text-zinc-400">
                   <Laptop className="w-6 h-6 mx-auto mb-1.5 text-zinc-300 stroke-[1.5]" />
                   <p className="text-xs font-medium text-zinc-600">No other devices logged in</p>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">When team members log in, their authenticated devices will appear here in real-time.</p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    {dbConfigured
+                      ? 'Devices appear here once their sessions sync to the database.'
+                      : 'Only this device is tracked. Configure a database to see other devices.'}
+                  </p>
                 </div>
               ) : (
                 sessions.map((sess) => {

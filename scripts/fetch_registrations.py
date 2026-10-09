@@ -37,6 +37,8 @@ UNSTOP_ACCOUNT_ID = os.environ.get("UNSTOP_ACCOUNT_ID", "2313619").strip()
 UNSTOP_EMAIL = os.environ.get("UNSTOP_EMAIL", "").strip()
 UNSTOP_PASSWORD = os.environ.get("UNSTOP_PASSWORD", "").strip()
 MOCK_MODE = os.environ.get("MOCK_MODE", "false").lower() in ("true", "1", "yes")
+# One-shot discovery: set UNSTOP_RAW_DUMP=1 to write data/unstop_status_values.json
+RAW_DUMP = os.environ.get("UNSTOP_RAW_DUMP", "false").lower() in ("true", "1", "yes")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -202,6 +204,96 @@ def is_registration_paid(record: dict) -> bool:
     return False
 
 
+# Tokens that indicate a registration was cancelled. Unstop does not document
+# its status vocabulary, so this is intentionally broad; an unrecognised or
+# empty status is never treated as cancelled. Run with UNSTOP_RAW_DUMP=1 once to
+# capture the real values in data/unstop_status_values.json, then tighten this.
+CANCEL_TOKENS = (
+    "cancel",
+    "deleted",
+    "withdraw",
+    "dropped",
+    "refund requested",
+)
+
+
+def is_registration_cancelled(record: dict) -> bool:
+    """
+    Detect a cancelled registration.
+
+    The exact field names are not documented by Unstop, so this checks every
+    plausible signal and only treats an explicit cancellation token as a match.
+    An empty/unknown status never counts as cancelled.
+
+    Run the scraper with UNSTOP_RAW_DUMP=1 once to capture the real vocabulary
+    in data/unstop_status_values.json, then tighten CANCEL_TOKENS if needed.
+    """
+    status_fields = (
+        "regi_status",
+        "registrationStatus",
+        "status",
+        "status_text",
+        "state",
+    )
+
+    for field in status_fields:
+        value = str(record.get(field, "") or "").strip().lower()
+        if not value:
+            continue
+        if any(token in value for token in CANCEL_TOKENS):
+            return True
+
+    # Explicit boolean flags, if Unstop exposes them
+    for flag in ("is_cancelled", "isCanceled", "cancelled", "canceled", "is_deleted", "isDeleted"):
+        if record.get(flag) is True:
+            return True
+
+    # A populated cancellation timestamp is unambiguous
+    for field in ("cancelled_at", "canceled_at", "deleted_at", "cancelledAt"):
+        if record.get(field):
+            return True
+
+    return False
+
+
+def dump_status_vocabulary(records: list) -> None:
+    """
+    One-shot discovery helper. With UNSTOP_RAW_DUMP=1 this writes the distinct
+    status values and a sample record's key list so the cancellation detector
+    can be written against real data instead of assumptions.
+    """
+    field_values = {}
+    sample_keys = set()
+
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        sample_keys.update(record.keys())
+        for field in ("regi_status", "registrationStatus", "status", "status_text", "state"):
+            value = record.get(field)
+            if value is not None:
+                field_values.setdefault(field, {})
+                text = str(value)
+                field_values[field][text] = field_values[field].get(text, 0) + 1
+
+    payload = {
+        "dumped_at": datetime.now(timezone.utc).isoformat(),
+        "record_count": len(records),
+        "available_keys": sorted(sample_keys),
+        "status_values": field_values,
+    }
+
+    out_path = os.path.join(DATA_DIR, "unstop_status_values.json")
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True, ensure_ascii=False)
+        handle.write("\n")
+
+    logging.info(f"Status vocabulary written to {out_path}")
+    for field, values in field_values.items():
+        logging.info(f"  {field}: {values}")
+
+
 def normalize_record(record: dict, index: int, event_info: dict) -> dict:
     """Normalize Unstop record into standard dashboard format."""
     players = record.get("players") or []
@@ -262,32 +354,33 @@ def normalize_record(record: dict, index: int, event_info: dict) -> dict:
     regn_id = record.get("regn_id") or str(record.get("id")) or f"REG-{index:04d}"
     registered_at = record.get("last_seen") or record.get("created_at") or datetime.now(timezone.utc).isoformat()
     
-    REFUNDED_LEAD_IDS = {
-        '1744221-UU03F60T', '1744216-U30ZI9O2', '1744216-UR6ZD046', 
-        '1744207-U9BWU939', '1744174-U4X9FV67', '1744167-U7Y62Q8V', 
-        '1743774-UD66PC39'
-    }
-    REFUNDED_INTERNAL_IDS = {
-        59665627, 59581506, 59581333, 58445169, 59821533, 59998950, 59922507
-    }
+    # Cancellation is checked before the refund rule: someone who cancelled
+    # after paying must show as CANCELLED, not REFUNDED, so the win-back queue
+    # picks them up.
+    is_cancelled = is_registration_cancelled(record)
 
-    # All Unstop fees were refunded back to candidates.
-    # No participant should be marked as PAID from Unstop.
-    is_refunded = (
-        regn_id in REFUNDED_LEAD_IDS or 
-        record.get("id") in REFUNDED_INTERNAL_IDS or 
-        amount > 0 or 
-        record.get("is_refunded") is True
-    )
+    cancelled_at = None
+    for field in ("cancelled_at", "canceled_at", "deleted_at", "cancelledAt"):
+        if record.get(field):
+            cancelled_at = record[field]
+            break
 
-    if is_refunded:
+    if is_cancelled:
+        is_refunded = False
         is_paid = False
-        payment_status = "REFUNDED"
-        status_label = "Refunded (Unstop)"
+        payment_status = "CANCELLED"
+        status_label = "Registration Cancelled"
     else:
+        # All Unstop fees were refunded back to candidates, so a nonzero amount
+        # from Unstop means "was paid, now refunded".
+        is_refunded = amount > 0 or record.get("is_refunded") is True
         is_paid = False
-        payment_status = "UNPAID"
-        status_label = "Payment Pending (techfest26.in)"
+        if is_refunded:
+            payment_status = "REFUNDED"
+            status_label = "Refunded (Unstop)"
+        else:
+            payment_status = "UNPAID"
+            status_label = "Payment Pending (techfest26.in)"
 
     return {
         "id": regn_id,
@@ -306,6 +399,10 @@ def normalize_record(record: dict, index: int, event_info: dict) -> dict:
         "amount": amount,
         "payment_status": payment_status,
         "is_paid": is_paid,
+        "is_refunded": is_refunded,
+        "is_cancelled": is_cancelled,
+        "cancelled_at": cancelled_at,
+        "cancel_reverted": False,
         "status_label": status_label,
         "registered_at": registered_at,
         "resume_url": record.get("resume_url"),
@@ -458,6 +555,7 @@ def main():
     all_paid_participants = []
     events_summary = []
     total_fest_applicants = 0
+    raw_dump_records = []
 
     if not MOCK_MODE and UNSTOP_TOKEN:
         events = fetch_all_opportunities(session, headers)
@@ -479,6 +577,9 @@ def main():
             paid_records = [r for r in records if is_registration_paid(r)]
             total_fest_applicants += len(records)
 
+            if RAW_DUMP and records:
+                raw_dump_records.extend(records)
+
             events_summary.append({
                 "id": eid,
                 "title": title,
@@ -499,6 +600,9 @@ def main():
 
             time.sleep(0.15)  # Polite pacing to avoid rate limits
 
+    if RAW_DUMP and raw_dump_records:
+        dump_status_vocabulary(raw_dump_records)
+
     # If API not configured or zero returned, retain cached data if present
     if not all_participants:
         if os.path.exists(ROOT_DATA_FILE) and os.path.getsize(ROOT_DATA_FILE) > 30:
@@ -517,8 +621,10 @@ def main():
     total_count = len(all_participants)
     refunded_participants = [p for p in all_participants if p.get("is_refunded")]
     total_refunded_count = len(refunded_participants)
-    total_paid_count = 0  # Payments transitioned to techfest26.in
-    total_unpaid_count = total_count - total_refunded_count
+    cancelled_participants = [p for p in all_participants if p.get("is_cancelled")]
+    total_cancelled_count = len(cancelled_participants)
+    total_paid_count = 0  # Unstop no longer reports payments; techfest26.in owns this now
+    total_unpaid_count = total_count - total_refunded_count - total_cancelled_count
     total_refunded_amount = sum(p.get("amount", 0) for p in refunded_participants)
     colleges = list({p.get("college") for p in all_participants if p.get("college") and p.get("college") != "N/A"})
     active_events = [e for e in events_summary if e.get("total_registrations", 0) > 0]
@@ -530,6 +636,7 @@ def main():
         "total_unstop_registrations": total_count,
         "total_paid_registrations": 0,
         "total_refunded_registrations": total_refunded_count,
+        "total_cancelled_registrations": total_cancelled_count,
         "total_unpaid_registrations": total_unpaid_count,
         "total_amount_collected": 0.0,
         "total_amount_refunded": round(total_refunded_amount, 2),
@@ -538,13 +645,22 @@ def main():
         "events_with_paid": 0,
         "events_list": events_summary,
         "status": "HEALTHY",
-        "note": "Scheduled sync stopped. All Unstop payments refunded. Payments moving to techfest26.in."
+        "note": (
+            "Unstop payments fully refunded; live payment status comes from "
+            "techfest26.in via the sync-payments workflow."
+        )
     }
 
     # Save outputs
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(refunded_participants, f, indent=2, ensure_ascii=False)
     logging.info(f"Saved {total_refunded_count} refunded records to {OUTPUT_FILE}")
+
+    if total_paid_count == 0:
+        logging.info(
+            "No paid registrations: Unstop payment reporting is retired. Live payment "
+            "status comes from techfest26.in via the sync-payments workflow."
+        )
 
     with open(SUMMARY_FILE, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
@@ -556,22 +672,25 @@ def main():
     }
     with open(ROOT_DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(combined_web_data, f, indent=2, ensure_ascii=False)
-    logging.info(f"Saved {total_count} total records (complete + incomplete) to {ROOT_DATA_FILE}")
+    logging.info(f"Saved {total_count} total records to {ROOT_DATA_FILE}")
 
-    # Also save data.js for instantaneous failproof browser loading
-    data_js_file = os.path.join(BASE_DIR, "data.js")
-    with open(data_js_file, "w", encoding="utf-8") as f:
-        f.write("window.__TECHFEST_DATA__ = ")
-        json.dump(combined_web_data, f, ensure_ascii=False)
-        f.write(";\n")
-    logging.info(f"Saved instantaneous bundle to {data_js_file}")
+    # Cancellations get their own file for quick reference by the calling desk
+    if total_cancelled_count > 0:
+        cancelled_file = os.path.join(DATA_DIR, "cancelled_registrations.json")
+        with open(cancelled_file, "w", encoding="utf-8") as f:
+            json.dump(cancelled_participants, f, indent=2, ensure_ascii=False)
+        logging.info(f"Saved {total_cancelled_count} cancelled registrations to {cancelled_file}")
 
-    print("\n✅ Multi-Event Sync Completed Successfully!")
-    print(f"🎪 Total Events Scanned: {len(events_summary)} | Events with Paid Participants: {len(active_events)}")
-    print(f"📊 Total Fest Applicants: {total_fest_applicants} | Total Paid/Completed: {total_paid_count}")
-    print(f"💰 Revenue: ₹{total_revenue:,.2f} | Unique Colleges: {len(colleges)}")
+    print("\nMulti-Event Sync Completed Successfully!")
+    print(f"Events Scanned: {len(events_summary)} | With Registrations: {len(active_events)}")
+    print(
+        f"Registrations: {total_count} | Refunded: {total_refunded_count} | "
+        f"Cancelled: {total_cancelled_count} | Awaiting payment: {total_unpaid_count}"
+    )
+    print(f"Unique Colleges: {len(colleges)}")
+    print("Payment status is owned by techfest26.in; see the sync-payments workflow.")
     if token_expiry:
-        print(f"⏳ Current Token Valid Until: {token_expiry}")
+        print(f"Current Token Valid Until: {token_expiry}")
 
 
 if __name__ == "__main__":

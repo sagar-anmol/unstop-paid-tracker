@@ -4,9 +4,11 @@ import {
   fetchCallRecordsFromNeon, 
   fetchAuditLogsFromNeon, 
   fetchPaymentVerificationsFromNeon,
+  fetchOpenPaymentClaimsFromNeon,
   writeCallLogToNeon, 
   writeAuditLogToNeon, 
   writePaymentVerificationToNeon,
+  createPaymentClaimToNeon,
   dbStatus
 } from './neonDb';
 import { getDeviceInfo } from './device';
@@ -86,6 +88,9 @@ export function formatCallTime(isoString) {
 
 const CALL_RECORDS_KEY = 'tf_call_records_v2';
 const AUDIT_LOGS_KEY = 'tf_audit_logs_v2';
+// Rolling local window. The durable copy lives in Neon; this only bounds what
+// the browser holds so localStorage does not grow without limit.
+const AUDIT_LOG_RETENTION = 2000;
 const MANUAL_VERIFICATIONS_KEY = 'tf_payment_verifications_v2';
 
 const INITIAL_CALL_RECORDS_SEED = {};
@@ -195,7 +200,8 @@ export function addAuditLog(entry) {
   if (!newEntry.ip) newEntry.ip = ip;
 
   logs.unshift(newEntry);
-  saveAuditLogs(logs.slice(0, 500)); // retain latest 500 logs
+  // Retain a rolling window in localStorage. Neon keeps the durable record.
+  saveAuditLogs(logs.slice(0, AUDIT_LOG_RETENTION));
   return newEntry;
 }
 
@@ -209,10 +215,11 @@ export async function syncWithNeonDatabase() {
   dbStatus.isSyncing = true;
 
   try {
-    const [neonCalls, neonAudits, neonVerifications] = await Promise.all([
+    const [neonCalls, neonAudits, neonVerifications, neonClaims] = await Promise.all([
       fetchCallRecordsFromNeon(),
-      fetchAuditLogsFromNeon(300),
-      fetchPaymentVerificationsFromNeon()
+      fetchAuditLogsFromNeon(500),
+      fetchPaymentVerificationsFromNeon(),
+      fetchOpenPaymentClaimsFromNeon(500)
     ]);
 
     // 1. Merge call records
@@ -261,7 +268,7 @@ export async function syncWithNeonDatabase() {
         }
       });
       combined.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      saveAuditLogs(combined.slice(0, 500));
+      saveAuditLogs(combined.slice(0, AUDIT_LOG_RETENTION));
     }
 
     // 3. Merge payment verifications
@@ -269,6 +276,11 @@ export async function syncWithNeonDatabase() {
       const localVerifications = getManualVerifications();
       const mergedVerifications = { ...localVerifications, ...neonVerifications };
       localStorage.setItem(MANUAL_VERIFICATIONS_KEY, JSON.stringify(mergedVerifications));
+    }
+
+    // 4. Merge CI reconciliation verdicts so the desk shows API evidence
+    if (Array.isArray(neonClaims) && neonClaims.length > 0) {
+      saveReconciledClaims(neonClaims);
     }
 
     dbStatus.isConnected = true;
@@ -401,16 +413,116 @@ export function logCallForParticipant({
   writeAuditLogToNeon(auditEntry)
     .catch(e => console.error('Neon writeAuditLog error:', e));
 
+  // A "Payment Completed" call raises a claim for CI to reconcile against
+  // the techfest26.in API. Callers do not capture UTRs, so matching is by email.
+  if (status === 'PAYMENT_CLAIMED') {
+    createPaymentClaimToNeon({
+      claimId: `claim_${pId}_${newCallNumber}`,
+      participantId: pId,
+      // Reconciliation matches on email, so a claim without one is stored but
+      // will never resolve automatically
+      email: (participant.email || '').toLowerCase().trim(),
+      participantName: participant.name || 'Participant',
+      claimedBy: callerUser.username || 'unknown',
+      claimedByName: callerUser.name || 'Staff Caller',
+      claimedAt: nowIso,
+      state: 'PENDING_RECONCILE',
+      claimedAmount: Number(participant.amount) || 0,
+      claimedUtr: '',
+      remark: callEntry.remark || ''
+    }).catch(e => console.error('Neon createPaymentClaim error:', e));
+  }
+
   return updatedRecord;
+}
+
+export const CLAIM_STATES = {
+  PENDING_RECONCILE: {
+    id: 'PENDING_RECONCILE',
+    label: 'Awaiting API Check',
+    badge: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    description: 'Claim raised. Waiting for the hourly reconciliation run.'
+  },
+  AWAITING_SETTLEMENT: {
+    id: 'AWAITING_SETTLEMENT',
+    label: 'Settling',
+    badge: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+    description: 'Registration found on techfest26.in but payment is still pending.'
+  },
+  MATCH_FOUND: {
+    id: 'MATCH_FOUND',
+    label: 'Payment Found',
+    badge: 'bg-violet-500/15 text-violet-400 border-violet-500/30',
+    description: 'Completed payment found for this email. Needs a human to confirm.'
+  },
+  NO_MATCH: {
+    id: 'NO_MATCH',
+    label: 'No Payment Found',
+    badge: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+    description: 'No matching registration on techfest26.in for this email.'
+  },
+  AMBIGUOUS: {
+    id: 'AMBIGUOUS',
+    label: 'Multiple Matches',
+    badge: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
+    description: 'More than one registration shares this email. Needs review.'
+  },
+  REVERT_CLAIMED: {
+    id: 'REVERT_CLAIMED',
+    label: 'Re-registering',
+    badge: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+    description: 'Caller confirmed they re-registered; awaiting the email to appear.'
+  },
+  VERIFIED_PAID: {
+    id: 'VERIFIED_PAID',
+    label: 'Verified Paid',
+    badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    description: 'Confirmed paid by a Central Desk admin.'
+  },
+  REJECTED: {
+    id: 'REJECTED',
+    label: 'Rejected',
+    badge: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
+    description: 'Claim rejected after review.'
+  }
+};
+
+const RECONCILED_CLAIMS_KEY = 'tf_reconciled_claims_v1';
+
+export function saveReconciledClaims(claims) {
+  try {
+    const map = {};
+    claims.forEach(c => {
+      if (c && c.claimId) map[c.claimId] = c;
+    });
+    localStorage.setItem(RECONCILED_CLAIMS_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.error('Error saving reconciled claims:', e);
+  }
+}
+
+export function getReconciledClaims() {
+  try {
+    const raw = localStorage.getItem(RECONCILED_CLAIMS_KEY);
+    if (raw) return JSON.parse(raw) || {};
+  } catch (e) {
+    console.error('Error loading reconciled claims:', e);
+  }
+  return {};
 }
 
 /**
  * Verification Queue Engine
- * Evaluates payment claims vs Unstop gateway records and flags defaulters
+ *
+ * Unstop no longer reports payments, so verdicts now come from the CI
+ * reconciliation run against the techfest26.in API. No claim is auto-flagged
+ * as a defaulter on a timer: a dispute is only raised when the API actually
+ * finds nothing, and a human always makes the final call.
  */
 export function getPaymentVerificationQueue(participants = []) {
   const records = getCallRecords();
   const manualVerifications = getManualVerifications();
+  const reconciled = getReconciledClaims();
   const results = [];
 
   // Index participants by ID
@@ -419,49 +531,88 @@ export function getPaymentVerificationQueue(participants = []) {
     pMap[String(p.id)] = p;
   });
 
-  Object.entries(records).forEach(([pId, record]) => {
-    if (record.lastStatus === 'PAYMENT_CLAIMED' || record.claimedAt) {
-      const p = pMap[pId] || { id: pId, name: 'Participant ' + pId, event_name: 'TechFEST Event', amount: 0 };
-      const isGatewayPaid = Boolean(p.is_paid || (Number(p.amount) > 0 && p.payment_id));
-      const manualStatus = manualVerifications[pId];
-
-      const claimedTime = new Date(record.claimedAt || record.lastCalledAt).getTime();
-      const elapsedHours = (Date.now() - claimedTime) / (1000 * 60 * 60);
-
-      let verificationState = 'PENDING_SYNC';
-      let stateBadge = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
-      let stateLabel = 'Pending Unstop Sync';
-
-      if (manualStatus === 'APPROVED' || isGatewayPaid) {
-        verificationState = 'VERIFIED_PAID';
-        stateBadge = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
-        stateLabel = 'Verified Gateway Payment';
-      } else if (manualStatus === 'REJECTED' || elapsedHours > 24) {
-        // Flagged as Defaulter after 24h without unstop payment match
-        verificationState = 'DEFAULTER';
-        stateBadge = 'bg-rose-500/15 text-rose-400 border-rose-500/30';
-        stateLabel = '⚠️ Defaulter (Unpaid in Gateway >24h)';
-      }
-
-      results.push({
-        participantId: pId,
-        participant: p,
-        record,
-        elapsedHours: Math.round(elapsedHours),
-        verificationState,
-        stateBadge,
-        stateLabel,
-        isGatewayPaid,
-        manualStatus,
-        utrNumber: record.utrNumber || record.history?.[0]?.utrNumber || '',
-        paymentMode: record.paymentMode || 'UPI / QR',
-        amountPaid: record.amountPaid || 199,
-        scheduledBatch: 'Saturday Verification Desk'
-      });
+  // Latest CI verdict per participant id
+  const claimByParticipant = {};
+  Object.values(reconciled).forEach(c => {
+    if (!c || !c.participantId) return;
+    const prev = claimByParticipant[c.participantId];
+    const claimedAt = new Date(c.claimedAt || 0).getTime();
+    if (!prev || claimedAt > new Date(prev.claimedAt || 0).getTime()) {
+      claimByParticipant[c.participantId] = c;
     }
   });
 
+  Object.entries(records).forEach(([pId, record]) => {
+    if (record.lastStatus !== 'PAYMENT_CLAIMED' && !record.claimedAt) return;
+
+    const p = pMap[pId] || { id: pId, name: 'Participant ' + pId, event_name: 'TechFEST Event', amount: 0 };
+    const manualStatus = manualVerifications[pId];
+    const claim = claimByParticipant[pId];
+
+    const claimedTime = new Date(record.claimedAt || record.lastCalledAt).getTime();
+    const elapsedHours = (Date.now() - claimedTime) / (1000 * 60 * 60);
+
+    let verificationState = 'PENDING_RECONCILE';
+    let stateLabel = CLAIM_STATES.PENDING_RECONCILE.label;
+
+    if (manualStatus === 'APPROVED') {
+      verificationState = 'VERIFIED_PAID';
+      stateLabel = CLAIM_STATES.VERIFIED_PAID.label;
+    } else if (manualStatus === 'REJECTED') {
+      verificationState = 'REJECTED';
+      stateLabel = CLAIM_STATES.REJECTED.label;
+    } else if (claim && claim.state) {
+      // Verdict written by the hourly CI reconciliation
+      verificationState = claim.state;
+      stateLabel = CLAIM_STATES[claim.state]?.label || claim.state;
+    }
+
+    const stateBadge = CLAIM_STATES[verificationState]?.badge || CLAIM_STATES.PENDING_RECONCILE.badge;
+
+    results.push({
+      participantId: pId,
+      participant: p,
+      record,
+      elapsedHours: Math.round(elapsedHours),
+      verificationState,
+      stateBadge,
+      stateLabel,
+      manualStatus,
+      claim: claim || null,
+      apiEvidence: claim ? {
+        registrationId: claim.apiRegistrationId,
+        utr: claim.apiUtr,
+        amount: claim.apiAmount,
+        status: claim.apiStatus,
+        note: claim.matchNote,
+        checkedAt: claim.lastCheckedAt
+      } : null,
+      utrNumber: record.utrNumber || record.history?.[0]?.utrNumber || '',
+      paymentMode: record.paymentMode || 'UPI / QR',
+      amountPaid: Number(p.amount) || 0,
+      scheduledBatch: 'Verification Desk'
+    });
+  });
+
+  // Most urgent first: disputes before matches before pending
+  const priority = { NO_MATCH: 0, AMBIGUOUS: 1, MATCH_FOUND: 2, REVERT_CLAIMED: 3, AWAITING_SETTLEMENT: 4, PENDING_RECONCILE: 5, REJECTED: 6, VERIFIED_PAID: 7 };
+  results.sort((a, b) => (priority[a.verificationState] ?? 9) - (priority[b.verificationState] ?? 9));
+
   return results;
+}
+
+/** Claims that need a human decision, split for the alert banner. */
+export function getVerificationAlerts(participants = []) {
+  const queue = getPaymentVerificationQueue(participants);
+  const disputes = queue.filter(q => q.verificationState === 'NO_MATCH' || q.verificationState === 'AMBIGUOUS');
+  const awaitingReview = queue.filter(q => q.verificationState === 'MATCH_FOUND');
+  return {
+    disputes,
+    awaitingReview,
+    total: queue.length,
+    disputeCount: disputes.length,
+    reviewCount: awaitingReview.length
+  };
 }
 
 export function getManualVerifications() {

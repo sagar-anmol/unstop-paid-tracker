@@ -1,33 +1,36 @@
 // src/App.jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { AlertTriangle, PhoneCall } from 'lucide-react';
 import Header from './components/Header';
 import BentoGrid from './components/BentoGrid';
 import KPIStrip from './components/KPIStrip';
-import AnalyticsChart from './components/AnalyticsChart';
 import DataTable from './components/DataTable';
 import CandidateDrawer from './components/CandidateDrawer';
 import TokenModal from './components/TokenModal';
 import BookmarkletModal from './components/BookmarkletModal';
+
 import CallRemarkModal from './components/CallRemarkModal';
-import AuthModal from './components/AuthModal';
 import AuditLogsModal from './components/AuditLogsModal';
 import VerificationQueueModal from './components/VerificationQueueModal';
 import DomainBanner from './components/DomainBanner';
 import LoginScreen from './components/LoginScreen';
 import PasswordManagerModal from './components/PasswordManagerModal';
 import DeviceActivityModal from './components/DeviceActivityModal';
-import NeonConfigModal from './components/NeonConfigModal';
 import AntiGravityReportModal from './components/AntiGravityReportModal';
 import ForcePasswordChangeModal from './components/ForcePasswordChangeModal';
 import Toast from './components/Toast';
+
+// data.json is fetched at runtime (with a CDN fallback) rather than imported,
+// so the multi-megabyte dataset does not ship inside the JS bundle.
 
 import { exportParticipantsToCSV } from './utils/csv';
 import { 
   getActiveUser, 
   setActiveUser, 
-  clearActiveUser,
+  clearActiveUser, 
   getParticipantsForUser, 
   syncPasswordsWithNeon,
+  loadDynamicUsers,
   isUserUsingDefaultPassword,
   DOMAINS_DIRECTORY 
 } from './utils/auth';
@@ -37,30 +40,23 @@ import {
 } from './utils/participantOverrides';
 import { 
   logCallForParticipant, 
-  getPaymentVerificationQueue, 
+  getVerificationAlerts, 
+  getCallRecords,
   syncWithNeonDatabase,
   addAuditLog,
   CALL_STATUSES 
 } from './utils/callStore';
-import { subscribeDbStatus } from './utils/neonDb';
+import { isParticipantCancelled } from './utils/paymentUtils';
+import { subscribeDbStatus, isDatabaseConfigured } from './utils/neonDb';
 import { recordLoginSession } from './utils/device';
 
-import initialData from '../data.json';
-
+// Both data.json and the techfest26.in payments snapshot are fetched at
+// runtime, so the multi-megabyte dataset never ships inside the JS bundle.
 export default function App() {
-  const [participants, setParticipants] = useState(() => {
-    if (initialData && Array.isArray(initialData.participants)) {
-      return applyParticipantOverrides(initialData.participants);
-    }
-    return [];
-  });
-
-  const [summary, setSummary] = useState(() => {
-    if (initialData && initialData.summary) {
-      return initialData.summary;
-    }
-    return {};
-  });
+  const [participants, setParticipants] = useState([]);
+  const [summary, setSummary] = useState({});
+  const [dataError, setDataError] = useState(null);
+  const [techfestPayments, setTechfestPayments] = useState({ records: [] });
 
   const [currentUser, setCurrentUser] = useState(() => getActiveUser());
   const [selectedDomainOverride, setSelectedDomainOverride] = useState('ALL');
@@ -75,12 +71,12 @@ export default function App() {
   const [isForcePasswordModalOpen, setIsForcePasswordModalOpen] = useState(false);
   const [isBookmarkletOpen, setIsBookmarkletOpen] = useState(false);
   const [isTokenHealthOpen, setIsTokenHealthOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAuditLogsOpen, setIsAuditLogsOpen] = useState(false);
   const [isVerificationQueueOpen, setIsVerificationQueueOpen] = useState(false);
+  // Removed: the NeonConfigModal let any visitor paste a database URL into the
+  // shared bundle. Connection settings now come from the build environment.
   const [isPasswordManagerOpen, setIsPasswordManagerOpen] = useState(false);
   const [isDeviceActivityOpen, setIsDeviceActivityOpen] = useState(false);
-  const [isNeonConfigOpen, setIsNeonConfigOpen] = useState(false);
   const [isAntiGravityReportOpen, setIsAntiGravityReportOpen] = useState(false);
   
   // Active call logging modal state
@@ -95,6 +91,11 @@ export default function App() {
   });
   const [neonStatus, setNeonStatus] = useState({ isConnected: false, isSyncing: false });
 
+  // Without a configured URL the panel runs fully on localStorage; the UI says
+  // so rather than silently pretending to be synced.
+  const dbConfigured = isDatabaseConfigured();
+  const neonDbConfigured = dbConfigured;
+
   // Sync theme with document root
   useEffect(() => {
     if (theme === 'light') {
@@ -108,10 +109,17 @@ export default function App() {
     }
   }, [theme]);
 
-  // Trigger toast with auto-hide
+  // Keep a ref to the toast timeout so a rapid second toast does not clear early
+  const toastTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
+
   const triggerToast = useCallback((toastData) => {
     setToast(toastData);
-    setTimeout(() => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
       setToast(current => current === toastData ? null : current);
     }, 3200);
   }, []);
@@ -126,16 +134,28 @@ export default function App() {
   // Load live data
   const fetchData = useCallback(async (isManual = false) => {
     if (isManual) setIsRefreshing(true);
-    else if (participants.length === 0) setIsLoading(true);
+    else setIsLoading(true);
 
     try {
       const timestamp = Date.now();
+      // Fetched at runtime rather than imported so the multi-megabyte dataset stays
+      // out of the JS bundle. The raw.githubusercontent mirror is a fallback for
+      // when Pages is serving a stale copy.
       const urls = [
         `./data.json?t=${timestamp}`,
-        `data.json?t=${timestamp}`,
-        './data/summary.json',
         'https://raw.githubusercontent.com/sagar-anmol/unstop-paid-tracker/main/data.json'
       ];
+
+      // Payment snapshot is small (kilobytes) and drives the rupee figures
+      try {
+        const payRes = await fetch(`./data/techfest26_payments.json?t=${timestamp}`);
+        if (payRes.ok) {
+          const payData = await payRes.json();
+          if (payData && typeof payData === 'object') setTechfestPayments(payData);
+        }
+      } catch (e) {
+        // Keep the previous snapshot rather than blanking the KPI card
+      }
 
       let loaded = false;
       for (const url of urls) {
@@ -146,10 +166,12 @@ export default function App() {
             if (data.participants && Array.isArray(data.participants)) {
               setParticipants(applyParticipantOverrides(data.participants));
               if (data.summary) setSummary(data.summary);
+              setDataError(null);
               loaded = true;
               break;
             } else if (Array.isArray(data)) {
               setParticipants(applyParticipantOverrides(data));
+              setDataError(null);
               loaded = true;
               break;
             }
@@ -159,10 +181,23 @@ export default function App() {
         }
       }
 
+      if (!loaded) {
+        setDataError(
+          'Could not load the registration dataset. Check your connection and retry from the header.'
+        );
+        triggerToast({ type: 'error', message: 'Dataset unavailable.' });
+        return;
+      }
+
       if (isManual) {
-        syncWithNeonDatabase();
-        syncPasswordsWithNeon();
-        triggerToast({ type: 'success', message: 'Dashboard & Neon Database synced!' });
+        // Refresh credentials and ops state; the dataset above was just refetched
+        await Promise.allSettled([syncWithNeonDatabase(), syncPasswordsWithNeon()]);
+        triggerToast({
+          type: neonDbConfigured ? 'success' : 'info',
+          message: neonDbConfigured
+            ? 'Dashboard & Neon Database synced!'
+            : 'Dashboard reloaded. Neon sync is off because no database URL is configured.'
+        });
       }
     } catch (err) {
       if (isManual) {
@@ -172,11 +207,14 @@ export default function App() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [participants.length, triggerToast]);
+  }, [triggerToast, neonDbConfigured]);
 
+  // Load once on mount. Re-running on every participants change would refetch
+  // the multi-megabyte dataset on each poll.
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+     
+  }, []);
 
   // Subscribe to Neon DB connection status
   useEffect(() => {
@@ -184,20 +222,57 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Initial cloud sync & periodic polling every 12 seconds
+  // Sync ops state with Neon on load, on focus, and on a backed-off interval
   useEffect(() => {
     const doSync = () => {
+      if (!neonDbConfigured) return;
       syncWithNeonDatabase();
       syncPasswordsWithNeon();
     };
 
     doSync();
-    const interval = setInterval(doSync, 12000);
+
+    // Start at 60s and relax to 5min after the tab has been idle, so a desk left
+    // open all day does not hammer the database every minute.
+    const FAST_MS = 60000;
+    const SLOW_MS = 300000;
+    let pollMs = FAST_MS;
+    let slowTimer = null;
+
+    const clearSlowTimer = () => {
+      if (slowTimer) {
+        clearTimeout(slowTimer);
+        slowTimer = null;
+      }
+    };
+
+    const setPoll = (ms) => {
+      clearInterval(interval);
+      pollMs = ms;
+      interval = setInterval(doSync, pollMs);
+    };
+
+    const armSlowDown = () => {
+      clearSlowTimer();
+      slowTimer = setTimeout(() => setPoll(SLOW_MS), 5 * 60 * 1000);
+    };
+
+    const resetToFast = () => {
+      if (pollMs === FAST_MS) return;
+      setPoll(FAST_MS);
+      armSlowDown();
+    };
+
+    let interval = setInterval(() => { doSync(); armSlowDown(); }, FAST_MS);
+    armSlowDown();
 
     const handleVisibilityChange = () => {
-      if (!document.hidden) doSync();
+      if (!document.hidden) {
+        resetToFast();
+        doSync();
+      }
     };
-    window.addEventListener('focus', doSync);
+    window.addEventListener('focus', handleVisibilityChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const handleNeonSynced = () => {
@@ -207,11 +282,19 @@ export default function App() {
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', doSync);
+      clearSlowTimer();
+      window.removeEventListener('focus', handleVisibilityChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('tf_neon_synced', handleNeonSynced);
     };
-  }, []);
+  }, [neonDbConfigured]);
+
+  // Load runtime-managed team accounts so new logins resolve without a redeploy
+  useEffect(() => {
+    if (neonDbConfigured) {
+      loadDynamicUsers().catch(() => {});
+    }
+  }, [neonDbConfigured]);
 
   // Active domain identification
   const activeDomainId = useMemo(() => {
@@ -245,6 +328,18 @@ export default function App() {
   const handleExportCSV = () => {
     const success = exportParticipantsToCSV(displayedParticipants);
     if (success) {
+      addAuditLog({
+        actorName: currentUser?.name || 'Staff',
+        actorRole: currentUser?.role || 'editor',
+        actorTeam: currentUser?.teamName || 'Operations',
+        action: 'CSV_EXPORT',
+        targetId: selectedDomainOverride || 'ALL',
+        targetName: `${displayedParticipants.length} participant records`,
+        eventName: 'Data Export',
+        prevStatus: 'IN_VIEW',
+        nextStatus: 'EXPORTED',
+        details: `${currentUser?.name || 'Staff'} exported ${displayedParticipants.length} participant records (domain: ${activeDomainId || 'ALL'}) as CSV`
+      });
       triggerToast({ type: 'success', message: `Exported ${displayedParticipants.length} attendees to CSV` });
     }
   };
@@ -256,12 +351,26 @@ export default function App() {
     setSelectedDomainOverride('ALL');
     setSelectedEventFilter('');
     recordLoginSession(user);
+
+    addAuditLog({
+      actorName: user.name,
+      actorRole: user.role,
+      actorTeam: user.teamName || 'Operations',
+      action: 'LOGIN_SUCCESS',
+      targetId: user.username,
+      targetName: user.name,
+      eventName: 'Access Control',
+      prevStatus: 'SIGNED_OUT',
+      nextStatus: 'SIGNED_IN',
+      details: `${user.name} (${user.username}) signed in as ${user.role}`
+    });
+
     triggerToast({
       type: 'success',
       message: `Welcome, ${user.name}! Operations dashboard unlocked.`
     });
 
-    // Check if user is on default password, prompt to change
+    // Every new account must replace its initial password at first sign-in
     if (isUserUsingDefaultPassword(user.username)) {
       setTimeout(() => {
         setIsForcePasswordModalOpen(true);
@@ -280,6 +389,7 @@ export default function App() {
           if (updatedFields.payment_status) {
             merged.is_paid = updatedFields.payment_status === 'PAID';
             merged.is_refunded = updatedFields.payment_status === 'REFUNDED';
+            merged.is_cancelled = updatedFields.payment_status === 'CANCELLED';
           }
           if (updatedFields.amount !== undefined) {
             merged.amount = Number(updatedFields.amount);
@@ -301,6 +411,7 @@ export default function App() {
         if (updatedFields.payment_status) {
           merged.is_paid = updatedFields.payment_status === 'PAID';
           merged.is_refunded = updatedFields.payment_status === 'REFUNDED';
+          merged.is_cancelled = updatedFields.payment_status === 'CANCELLED';
         }
         if (updatedFields.amount !== undefined) {
           merged.amount = Number(updatedFields.amount);
@@ -334,15 +445,29 @@ export default function App() {
     });
   }, [currentUser, triggerToast]);
 
-  // Sync active user session on load
+  // Record the device session whenever the active user changes
   useEffect(() => {
     if (currentUser) {
       recordLoginSession(currentUser);
     }
-  }, []);
+  }, [currentUser]);
 
   // Handle Explicit Logout
   const handleLogout = useCallback(() => {
+    if (currentUser) {
+      addAuditLog({
+        actorName: currentUser.name,
+        actorRole: currentUser.role,
+        actorTeam: currentUser.teamName || 'Operations',
+        action: 'LOGOUT',
+        targetId: currentUser.username,
+        targetName: currentUser.name,
+        eventName: 'Access Control',
+        prevStatus: 'SIGNED_IN',
+        nextStatus: 'SIGNED_OUT',
+        details: `${currentUser.name} (${currentUser.username}) signed out`
+      });
+    }
     clearActiveUser();
     setCurrentUser(null);
     setSelectedDomainOverride('ALL');
@@ -351,12 +476,7 @@ export default function App() {
       type: 'info',
       message: 'Logged out successfully.'
     });
-  }, [triggerToast]);
-
-  // Switch Active User / RBAC Persona
-  const handleSelectUser = (user) => {
-    handleLoginSuccess(user);
-  };
+  }, [currentUser, triggerToast]);
 
   // Initiate Direct Phone Call & Open Post-Call Remark Modal
   const handleTriggerCall = useCallback((participant) => {
@@ -373,7 +493,7 @@ export default function App() {
   }, []);
 
   // Save Call Record & Log
-  const handleSaveCall = useCallback(({ participant, callerUser, remark, leadNumber, status }) => {
+  const handleSaveCall = useCallback(({ participant, callerUser, remark, leadNumber, status, cancelReason, revertOutcome }) => {
     try {
       logCallForParticipant({
         participant,
@@ -383,13 +503,75 @@ export default function App() {
         status
       });
 
+      // Win-back outcome for a cancelled registration is persisted as a record
+      // override so the row turns green and stays that way across reloads.
+      if (participant?.is_cancelled) {
+        const reverted = revertOutcome === 'REVERT_WON';
+        saveParticipantOverride(
+          participant.id,
+          {
+            is_cancelled: true,
+            cancel_reason: cancelReason || '',
+            cancel_reverted: reverted,
+            status_label: reverted ? 'Cancelled — Won Back' : 'Registration Cancelled'
+          },
+          currentUser
+        );
+
+        setParticipants(prev => prev.map(p => (
+          String(p.id) === String(participant.id)
+            ? {
+                ...p,
+                is_cancelled: true,
+                cancel_reason: cancelReason || '',
+                cancel_reverted: reverted,
+                status_label: reverted ? 'Cancelled — Won Back' : 'Registration Cancelled'
+              }
+            : p
+        )));
+
+        setSelectedParticipant(curr => (
+          curr && String(curr.id) === String(participant.id)
+            ? {
+                ...curr,
+                is_cancelled: true,
+                cancel_reason: cancelReason || '',
+                cancel_reverted: reverted,
+                status_label: reverted ? 'Cancelled — Won Back' : 'Registration Cancelled'
+              }
+            : curr
+        ));
+
+        addAuditLog({
+          actorName: callerUser?.name || 'Staff',
+          actorRole: callerUser?.role || 'caller',
+          actorTeam: callerUser?.teamName || 'Central Desk',
+          action: reverted ? 'CANCELLATION_REVERTED' : 'CANCELLATION_CONTACTED',
+          targetId: String(participant.id),
+          targetName: participant.name,
+          eventName: participant.event_name || 'Win-back',
+          prevStatus: 'CANCELLED',
+          nextStatus: reverted ? 'REVERTED' : 'STILL_CANCELLED',
+          details: `Reason: ${cancelReason || 'unknown'}. Outcome: ${revertOutcome || 'unknown'}`
+        });
+      }
+
       setCallDbVersion(v => v + 1);
 
       const statusDef = CALL_STATUSES[status];
-      if (status === 'PAYMENT_CLAIMED') {
+      if (participant?.is_cancelled) {
+        triggerToast({
+          type: revertOutcome === 'REVERT_WON' ? 'success' : 'info',
+          message: revertOutcome === 'REVERT_WON'
+            ? `Win-back recorded for ${participant.name}. Marked as won back.`
+            : `Win-back attempt logged for ${participant.name}.`
+        });
+      } else if (status === 'PAYMENT_CLAIMED') {
         triggerToast({
           type: 'success',
-          message: `Payment claimed for ${participant.name}! Queued to Verification Desk.`
+          message: dbConfigured
+            ? `Payment claimed for ${participant.name}! Queued for reconciliation.`
+            : `Payment claimed for ${participant.name}. Tracked on this device only.`
         });
       } else {
         triggerToast({
@@ -403,18 +585,32 @@ export default function App() {
         message: err.message || 'Failed to save call record'
       });
     }
-  }, [triggerToast]);
+  }, [currentUser, triggerToast, dbConfigured]);
 
-  // Compute pending verifications count for header badge
-  const pendingVerificationCount = useMemo(() => {
-    const queue = getPaymentVerificationQueue(participants);
-    return queue.filter(q => q.verificationState === 'PENDING_SYNC' || q.verificationState === 'DEFAULTER').length;
+  // Claims needing attention: disputes plus matches awaiting human confirmation.
+  const verificationAlerts = useMemo(() => {
+    return getVerificationAlerts(participants);
   }, [participants, callDbVersion]);
+
+  const pendingVerificationCount = verificationAlerts.disputeCount + verificationAlerts.reviewCount;
+
+  // Cancellations nobody has called yet: the win-back work that is still open
+  const [selectedCancelledOnly, setSelectedCancelledOnly] = useState(false);
+  const cancelledAwaitingCall = useMemo(() => {
+    const records = getCallRecords();
+    return displayedParticipants.filter(p => {
+      if (!isParticipantCancelled(p) || p.cancel_reverted) return false;
+      return (records[String(p.id)]?.callCount || 0) === 0;
+    }).length;
+  }, [displayedParticipants]);
 
   // Keyboard shortcut for search
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT') {
+      const el = document.activeElement;
+      const tag = el?.tagName;
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable;
+      if (e.key === '/' && !isTyping) {
         e.preventDefault();
         const searchInput = document.querySelector('input[type="text"]');
         if (searchInput) searchInput.focus();
@@ -434,10 +630,34 @@ export default function App() {
     );
   }
 
+  // While an account is still on its initial password the dashboard is withheld
+  // entirely: the dashboard data never renders behind the change form, and the
+  // admin tools do not exist yet.
+  const accountLocked = isUserUsingDefaultPassword(currentUser?.username);
+
+  if (accountLocked) {
+    return (
+      <div className="min-h-screen bg-[#F4F4F5] text-[#18181B] font-sans">
+        <ForcePasswordChangeModal
+          isOpen
+          currentUser={currentUser}
+          // Login also schedules the self-service modal via a timeout. Clearing
+          // the flag here stops that instance from surviving as a stray
+          // "Change Password" dialog over the dashboard once this forced change
+          // completes and unblocks the account.
+          onClose={() => setIsForcePasswordModalOpen(false)}
+          onTriggerToast={triggerToast}
+          isForced
+        />
+        <Toast toast={toast} onClose={() => setToast(null)} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F4F4F5] text-[#18181B] font-sans selection:bg-zinc-200 selection:text-zinc-900">
       
-      {/* 1. Header with RBAC Profile, 13 Domain Switcher & Verification Badges */}
+      {/* Header with RBAC profile, 13-domain switcher and verification badges */}
       <Header
         onRefresh={() => fetchData(true)}
         isRefreshing={isRefreshing}
@@ -446,21 +666,35 @@ export default function App() {
         onOpenChangePassword={() => setIsForcePasswordModalOpen(true)}
         onOpenBookmarklet={() => setIsBookmarkletOpen(true)}
         onOpenTokenHealth={() => setIsTokenHealthOpen(true)}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
         onOpenAuditLogs={() => setIsAuditLogsOpen(true)}
         onOpenVerificationQueue={() => setIsVerificationQueueOpen(true)}
         onOpenDeviceActivity={() => setIsDeviceActivityOpen(true)}
-        onOpenNeonConfig={() => setIsNeonConfigOpen(true)}
         onOpenAntiGravityReport={() => setIsAntiGravityReportOpen(true)}
+        techfestPayments={techfestPayments}
         onExportCSV={handleExportCSV}
         currentUser={currentUser}
         selectedDomainOverride={selectedDomainOverride}
         onSelectDomainOverride={(d) => {
+          if (currentUser) {
+            addAuditLog({
+              actorName: currentUser.name,
+              actorRole: currentUser.role,
+              actorTeam: currentUser.teamName || 'Operations',
+              action: 'DOMAIN_SWITCH',
+              targetId: d,
+              targetName: d === 'ALL' ? 'All Domains' : (DOMAINS_DIRECTORY[d]?.name || d),
+              eventName: 'Scope Change',
+              prevStatus: selectedDomainOverride === 'ALL' ? 'All Domains' : (DOMAINS_DIRECTORY[selectedDomainOverride]?.name || selectedDomainOverride),
+              nextStatus: d === 'ALL' ? 'All Domains' : (DOMAINS_DIRECTORY[d]?.name || d),
+              details: `${currentUser.name} switched the dashboard scope`
+            });
+          }
           setSelectedDomainOverride(d);
           setSelectedEventFilter('');
         }}
         verificationCount={pendingVerificationCount}
         attendeeCount={scopedParticipants.length}
+        disputeCount={verificationAlerts.disputeCount}
         theme={theme}
         onToggleTheme={toggleTheme}
         summary={summary}
@@ -476,9 +710,27 @@ export default function App() {
             <div className="w-8 h-8 rounded-full border-2 border-sky-400 border-t-transparent animate-spin mx-auto mb-3"></div>
             <p className="text-xs font-mono text-slate-400">Loading verified techFEST '26 records...</p>
           </div>
+        ) : dataError && participants.length === 0 ? (
+          <div className="py-24 text-center">
+            <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto mb-3" />
+            <p className="text-sm font-semibold text-slate-700">Dataset unavailable</p>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">{dataError}</p>
+          </div>
         ) : (
           <>
-            {/* DOMAIN HERO BANNER: Shown when logged in as Domain Head or when Super Admin filters to a domain */}
+            {dataError && (
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-[11px] text-amber-800">
+                Showing the last successfully loaded dataset. {dataError}
+              </div>
+            )}
+
+            {/* KPI Strip: Registrations, Collected, Verification Desk, Cancellations */}
+            <KPIStrip
+              summary={summary}
+              participants={displayedParticipants}
+              techfestPayments={techfestPayments}
+            />
+
             {activeDomainId && (
               <DomainBanner
                 domainId={activeDomainId}
@@ -489,8 +741,55 @@ export default function App() {
               />
             )}
 
+            {/* Dispute alert banner: claims the API could not confirm */}
+            {verificationAlerts.disputeCount > 0 && (
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-rose-800">
+                    {verificationAlerts.disputeCount} payment claim{verificationAlerts.disputeCount === 1 ? '' : 's'} could not be confirmed on techfest26.in
+                  </p>
+                  <p className="text-[11px] text-rose-700/80 mt-0.5">
+                    Matched by email. Review them in the Verification Desk before the next calling round.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsVerificationQueueOpen(true)}
+                  className="ml-auto shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 cursor-pointer"
+                >
+                  Review
+                </button>
+              </div>
+            )}
+
+            {/* Win-back alert: cancelled registrations still awaiting a call */}
+            {cancelledAwaitingCall > 0 && (
+              <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <PhoneCall className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-amber-900">
+                    {cancelledAwaitingCall} cancelled registration{cancelledAwaitingCall === 1 ? '' : 's'} still to contact
+                  </p>
+                  <p className="text-[11px] text-amber-800/80 mt-0.5">
+                    Call them to capture why they cancelled and whether they re-registered.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedEventFilter('');
+                    setSelectedCancelledOnly(v => !v);
+                  }}
+                  className="ml-auto shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 cursor-pointer"
+                >
+                  {selectedCancelledOnly ? 'Show all' : 'Show'}
+                </button>
+              </div>
+            )}
+
             {/* 2. Modern 3-Column Bento Grid Dashboard directly matching ui.shadcn.com */}
             <BentoGrid
+              key={`grid_${activeDomainId || 'all'}`}
+              callDbVersion={callDbVersion}
               participants={displayedParticipants}
               summary={summary}
               currentUser={currentUser}
@@ -499,17 +798,34 @@ export default function App() {
               onOpenVerificationQueue={() => setIsVerificationQueueOpen(true)}
             />
 
-            {/* 4. Master Operations Data Table with Direct Calling & Domain Awareness */}
+            {/* Master Operations Data Table with Direct Calling & Domain Awareness */}
             <DataTable
-              key={activeDomainId || 'all'}
+              key={`${activeDomainId || 'all'}_${selectedCancelledOnly}`}
               callDbVersion={callDbVersion}
               participants={scopedParticipants}
               summary={summary}
               currentUser={currentUser}
               activeDomainId={activeDomainId}
+              focusCancelled={selectedCancelledOnly}
               selectedEventFilter={selectedEventFilter}
               onSelectEventFilter={setSelectedEventFilter}
-              onSelectParticipant={setSelectedParticipant}
+              onSelectParticipant={(p) => {
+          if (currentUser && p) {
+            addAuditLog({
+              actorName: currentUser.name,
+              actorRole: currentUser.role,
+              actorTeam: currentUser.teamName || 'Operations',
+              action: 'PARTICIPANT_VIEW',
+              targetId: String(p.id),
+              targetName: p.name || 'Participant',
+              eventName: p.event_name || 'Event',
+              prevStatus: 'LIST',
+              nextStatus: 'RECORD_OPENED',
+              details: `${currentUser.name} opened the record for ${p.name} (${p.event_name || 'unknown event'})`
+            });
+          }
+          setSelectedParticipant(p);
+        }}
               onTriggerCall={handleTriggerCall}
               onTriggerToast={triggerToast}
             />
@@ -550,21 +866,13 @@ export default function App() {
         onSubmit={handleSaveCall}
       />
 
-      {/* Operations 17 Logins & Credentials Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        currentUser={currentUser}
-        onClose={() => setIsAuthModalOpen(false)}
-        onSelectUser={handleSelectUser}
-      />
-
       {/* Caller Activity & Access Control Audit Logs Modal */}
       <AuditLogsModal
         isOpen={isAuditLogsOpen}
         onClose={() => setIsAuditLogsOpen(false)}
       />
 
-      {/* Payment Verification & Defaulter Desk Modal */}
+      {/* Payment Verification Desk */}
       <VerificationQueueModal
         isOpen={isVerificationQueueOpen}
         participants={participants}
@@ -602,19 +910,13 @@ export default function App() {
         onClose={() => setIsDeviceActivityOpen(false)}
       />
 
-      {/* Zero-Leak Neon Cloud Database Configuration & Password Rotation Modal */}
-      <NeonConfigModal
-        isOpen={isNeonConfigOpen}
-        onClose={() => setIsNeonConfigOpen(false)}
-        onTriggerToast={triggerToast}
-      />
-
-      {/* Anti-Gravity Operations & Financial Intelligence Report (Sliet Hub Meeting) */}
+      {/* Operations & Financial Intelligence Report (Sliet Hub submission) */}
       <AntiGravityReportModal
         isOpen={isAntiGravityReportOpen}
         onClose={() => setIsAntiGravityReportOpen(false)}
         participants={participants}
         summary={summary}
+        techfestPayments={techfestPayments}
         currentUser={currentUser}
       />
 

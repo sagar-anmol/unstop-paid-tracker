@@ -24,9 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DOMAINS_DIRECTORY } from '../utils/auth';
 import { 
-  isParticipantRefunded, 
-  isParticipantPaid, 
-  isParticipantUnpaid 
+  isParticipantRefunded,
+  isParticipantUnpaid
 } from '../utils/paymentUtils';
 
 export default function AntiGravityReportModal({ 
@@ -34,6 +33,7 @@ export default function AntiGravityReportModal({
   onClose, 
   participants = [], 
   summary = {}, 
+  techfestPayments,
   currentUser 
 }) {
   const [copied, setCopied] = useState(false);
@@ -44,13 +44,19 @@ export default function AntiGravityReportModal({
   const totalCount = participants.length;
   const refundedCount = participants.filter(p => isParticipantRefunded(p)).length;
   const unpaidCount = participants.filter(p => isParticipantUnpaid(p)).length;
-  const paidCount = participants.filter(p => isParticipantPaid(p)).length;
 
   const refundedRevenue = participants.reduce((sum, p) => isParticipantRefunded(p) ? sum + (Number(p.amount) || 0) : sum, 0);
-  const gatewayRevenue = participants.reduce((sum, p) => isParticipantPaid(p) ? sum + (Number(p.amount) || 0) : sum, 0);
-  const pipelineValue = unpaidCount * 199;
-  const refundedPct = totalCount > 0 ? ((refundedCount / totalCount) * 100).toFixed(1) : '0.0';
   const unpaidPct = totalCount > 0 ? ((unpaidCount / totalCount) * 100).toFixed(1) : '0.0';
+
+  // Real collected figures come from the techfest26.in snapshot synced by CI.
+  // Until that first run the report says so instead of projecting a rupee total.
+  const paymentRecords = Array.isArray(techfestPayments?.records) ? techfestPayments.records : [];
+  const completedRecords = paymentRecords.filter(r => r.paymentStatus === 'completed');
+  const collectedAvailable = completedRecords.length > 0;
+  const collectedRevenue = completedRecords.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const collectedCount = completedRecords.length;
+  const eventCount = summary?.total_events_scanned
+    || new Set(participants.map(p => p.event_name).filter(Boolean)).size;
 
   const handlePrint = () => {
     window.print();
@@ -68,8 +74,8 @@ export default function AntiGravityReportModal({
 ## 1. Executive Metric Summary
 * **Total Scanned Registrations:** ${totalCount.toLocaleString('en-IN')}
 * **Unstop Refunds Processed:** ₹${refundedRevenue.toLocaleString('en-IN')} (${refundedCount} Candidates Refunded)
-* **Recoverable Calling Pipeline:** ₹${pipelineValue.toLocaleString('en-IN')} (${unpaidCount.toLocaleString('en-IN')} Leads @ ₹199)
-* **Unpaid Registrations:** ${unpaidCount.toLocaleString('en-IN')} (${unpaidPct}% - Pending techfest26.in)
+* **Recoverable Calling Pipeline:** ${unpaidCount.toLocaleString('en-IN')} leads awaiting a call (no revenue projection: actual collections depend on who completes payment on techfest26.in)
+ * **Unpaid Registrations:** ${unpaidCount.toLocaleString('en-IN')} (${unpaidPct}% - Pending techfest26.in)
 * **Event Scale:** 62 Competitions across 13 Technical Domains
 
 ---
@@ -172,13 +178,15 @@ export default function AntiGravityReportModal({
 
             <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200/80">
               <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
-                CALLING PIPELINE
+                COLLECTED (TECHFEST26.IN)
               </span>
               <span className="text-xl font-bold text-zinc-900">
-                ₹{pipelineValue.toLocaleString('en-IN')}
+                {collectedAvailable ? `₹${collectedRevenue.toLocaleString('en-IN')}` : '—'}
               </span>
-              <span className="text-[10px] text-amber-700 block mt-0.5">
-                {unpaidCount.toLocaleString('en-IN')} Unpaid Leads
+              <span className="text-[10px] text-zinc-500 block mt-0.5">
+                {collectedAvailable
+                  ? `${collectedCount} completed payments`
+                  : 'Awaiting the first sync run'}
               </span>
             </div>
 
@@ -199,7 +207,7 @@ export default function AntiGravityReportModal({
                 CATALOG SCOPE
               </span>
               <span className="text-xl font-bold text-zinc-900">
-                62 Events
+{eventCount} Events
               </span>
               <span className="text-[10px] text-zinc-500 block mt-0.5">
                 13 Tech Bays
