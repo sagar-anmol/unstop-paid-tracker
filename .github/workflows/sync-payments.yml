@@ -52,8 +52,8 @@ jobs:
           ADMIN_API_KEY: ${{ github.event.inputs.admin_api_key != '' && github.event.inputs.admin_api_key || secrets.ADMIN_API_KEY }}
         run: |
           if [ -z "$ADMIN_API_KEY" ]; then
-            echo "::error::ADMIN_API_KEY is not configured"
-            exit 1
+            echo "::warning::ADMIN_API_KEY is not configured yet in GitHub Secrets; skipping techfest26.in payments fetch."
+            exit 0
           fi
           python scripts/fetch_techfest26_payments.py
 
