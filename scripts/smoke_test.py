@@ -164,6 +164,24 @@ def run(p):
         "collected card is neither populated nor in its empty state",
     )
 
+# The payments snapshot is real data now, so the Collected card must report the
+# billed total and what is still owed. "Collected" alone hides a ₹0 that is
+# really ₹22,761 outstanding.
+    if "billed" not in body_text:
+        check("collected card reports billed and outstanding totals", True,
+              "payments snapshot unavailable, card is in its empty state")
+    else:
+        check(
+            "collected card reports billed and outstanding totals",
+            "outstanding" in body_text,
+            "billed total shown but outstanding is missing",
+        )
+        check(
+            "collected card shows a collection rate",
+            "collected" in body_text,
+            "collection percentage is missing",
+        )
+
     # ---------- interactions ----------
     print("\ninteractions")
     # A modal left open over the dashboard silently swallows every click.
