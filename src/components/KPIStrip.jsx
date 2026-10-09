@@ -36,14 +36,34 @@ export default function KPIStrip({ summary, participants, techfestPayments }) {
   const paymentStats = useMemo(() => {
     const records = Array.isArray(techfestPayments?.records) ? techfestPayments.records : [];
     if (records.length === 0) {
-      return { available: false, paidCount: 0, collected: 0, pendingCount: 0 };
+      return {
+        available: false,
+        paidCount: 0,
+        collected: 0,
+        pendingCount: 0,
+        billed: 0,
+        outstanding: 0,
+        collectionPct: 0,
+        lastSyncedAt: null
+      };
     }
     const completed = records.filter(r => r.paymentStatus === 'completed');
+    // `amount` is charged per registration, not per event, so this is a total
+    // across the snapshot and never split by event.
+    const billed = records.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const collected = completed.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+
     return {
       available: true,
       paidCount: completed.length,
-      collected: completed.reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
-      pendingCount: records.length - completed.length
+      collected,
+      billed,
+      outstanding: billed - collected,
+      pendingCount: records.length - completed.length,
+      // Collection rate against what was actually billed. Measuring this against
+      // the Unstop registration count would compare two unrelated populations.
+      collectionPct: billed > 0 ? (collected / billed) * 100 : 0,
+      lastSyncedAt: techfestPayments?.last_synced_at || null
     };
   }, [techfestPayments]);
 
@@ -92,9 +112,7 @@ export default function KPIStrip({ summary, participants, techfestPayments }) {
     };
   }, [participants]);
 
-  const collectedPct = paymentStats.available && totalCount > 0
-    ? (paymentStats.paidCount / totalCount) * 100
-    : 0;
+  const collectedPct = paymentStats.collectionPct;
   const collegeCount = summary?.total_colleges || new Set(participants.map(p => p.college).filter(Boolean)).size;
   const eventCount = summary?.total_events_scanned || new Set(participants.map(p => p.event_name)).size;
   const lastSyncedAt = summary?.last_synced_at;
@@ -125,13 +143,17 @@ export default function KPIStrip({ summary, participants, techfestPayments }) {
         : "bg-zinc-50 text-zinc-500 border-zinc-200",
       valueColor: paymentStats.available ? "text-emerald-700" : "text-zinc-400",
       subtext: paymentStats.available
-        ? `${paymentStats.paidCount.toLocaleString('en-IN')} completed • ${paymentStats.pendingCount.toLocaleString('en-IN')} pending`
+        ? `of ₹${paymentStats.billed.toLocaleString('en-IN')} billed • ${paymentStats.pendingCount.toLocaleString('en-IN')} pending`
         : "Live once the techfest26.in sync runs",
       progress: {
         pct: collectedPct,
         barClass: "bg-emerald-500",
-        label: paymentStats.available ? `${collectedPct.toFixed(1)}% of registrations paid` : 'No data yet',
-        value: `${refundedCount.toLocaleString('en-IN')} refunded`
+        label: paymentStats.available
+          ? `${collectedPct.toFixed(1)}% of billed collected`
+          : 'No data yet',
+        value: paymentStats.available
+          ? `₹${paymentStats.outstanding.toLocaleString('en-IN')} outstanding`
+          : `${refundedCount.toLocaleString('en-IN')} refunded`
       },
       icon: IndianRupee,
       iconBg: paymentStats.available ? "bg-emerald-50 text-emerald-600" : "bg-zinc-50 text-zinc-400"
@@ -206,6 +228,12 @@ export default function KPIStrip({ summary, participants, techfestPayments }) {
     ? `Last Unstop sync ${new Date(lastSyncedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} • ${collegeCount.toLocaleString('en-IN')} institutions`
     : null;
 
+  // The payments snapshot has its own clock, so surface it separately rather
+  // than implying the Unstop timestamp covers the rupee figures.
+  const paymentsHint = paymentStats.available && paymentStats.lastSyncedAt
+    ? `Payments synced ${new Date(paymentStats.lastSyncedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} • ${paymentStats.paidCount + paymentStats.pendingCount} registrations`
+    : null;
+
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 mb-3">
@@ -258,6 +286,12 @@ export default function KPIStrip({ summary, participants, techfestPayments }) {
         <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono mb-5">
           <Clock className="w-3 h-3" />
           <span>{syncHint}</span>
+        </div>
+      )}
+      {paymentsHint && (
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono mb-5">
+          <Clock className="w-3 h-3" />
+          <span>{paymentsHint}</span>
         </div>
       )}
     </>
