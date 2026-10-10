@@ -536,11 +536,22 @@ export default function CandidateDrawer({
                 </div>
                 <div className="flex items-center gap-2 font-semibold text-sm text-emerald-800">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Paid {amt > 0 ? `₹${amt.toLocaleString('en-IN')}` : ''} (Gateway Confirmed)</span>
+                  <span>Paid {amt > 0 ? `₹${amt.toLocaleString('en-IN')}` : ''} (UTR Verified)</span>
                 </div>
+                {participant.utr ? (
+                  <div className="text-[11px] font-mono text-emerald-700/90 mt-1 select-all">
+                    UTR: {participant.utr}
+                  </div>
+                ) : participant.paid_via_techfest26 ? (
+                  <div className="text-[11px] text-emerald-700/90 mt-1">
+                    Confirmed from the techfest26.in UTR on file.
+                  </div>
+                ) : null}
                 {participant.payment_id && (
                   <div className="text-[11px] font-mono text-emerald-700/80 mt-1 select-all">
-                    Txn ID: {participant.payment_id}
+                    {participant.source === 'techfest26'
+                      ? `Registration ID: ${participant.payment_id}`
+                      : `Txn ID: ${participant.payment_id}`}
                   </div>
                 )}
               </div>
