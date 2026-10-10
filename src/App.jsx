@@ -46,7 +46,7 @@ import {
   addAuditLog,
   CALL_STATUSES 
 } from './utils/callStore';
-import { isParticipantCancelled, buildTechfestPaymentIndex } from './utils/paymentUtils';
+import { isParticipantCancelled, buildTechfestPaymentIndex, reconcileParticipantsWithTechfest } from './utils/paymentUtils';
 import { subscribeDbStatus, isDatabaseConfigured } from './utils/neonDb';
 import { recordLoginSession } from './utils/device';
 
@@ -147,30 +147,35 @@ export default function App() {
       ];
 
       // Payment snapshot is small (kilobytes) and drives the rupee figures
+      let paymentsSnapshot = { records: [] };
       try {
         const payRes = await fetch(`./data/techfest26_payments.json?t=${timestamp}`);
         if (payRes.ok) {
           const payData = await payRes.json();
-          if (payData && typeof payData === 'object') setTechfestPayments(payData);
+          if (payData && typeof payData === 'object') {
+            paymentsSnapshot = payData;
+            setTechfestPayments(payData);
+          }
         }
       } catch (e) {
         // Keep the previous snapshot rather than blanking the KPI card
       }
 
       let loaded = false;
+      let unstopParticipants = null;
       for (const url of urls) {
         try {
           const res = await fetch(url);
           if (res.ok) {
             const data = await res.json();
             if (data.participants && Array.isArray(data.participants)) {
-              setParticipants(applyParticipantOverrides(data.participants));
+              unstopParticipants = data.participants;
               if (data.summary) setSummary(data.summary);
               setDataError(null);
               loaded = true;
               break;
             } else if (Array.isArray(data)) {
-              setParticipants(applyParticipantOverrides(data));
+              unstopParticipants = data;
               setDataError(null);
               loaded = true;
               break;
@@ -188,6 +193,14 @@ export default function App() {
         triggerToast({ type: 'error', message: 'Dataset unavailable.' });
         return;
       }
+
+      // Anyone who registered and paid on techfest26.in is missing from
+      // data.json, so they are merged in here. Without this they have no row on
+      // the calling desk at all: no badge, no phone number, no call button.
+      setParticipants(reconcileParticipantsWithTechfest(
+        applyParticipantOverrides(unstopParticipants),
+        paymentsSnapshot
+      ));
 
       if (isManual) {
         // Refresh credentials and ops state; the dataset above was just refetched

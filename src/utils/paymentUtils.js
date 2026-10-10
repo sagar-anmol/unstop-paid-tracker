@@ -294,6 +294,106 @@ export function getCallPaymentBadge(status) {
 }
 
 /**
+ * Merges techfest26.in registrations into the calling desk.
+ *
+ * data.json only carries Unstop registrations, so anyone who registered and
+ * paid on techfest26.in had no row at all: no badge, no phone, no call button.
+ * This does two things:
+ *
+ *   1. Upgrades an existing Unstop row to PAID when that person also paid on
+ *      techfest26.in, so the table badge stops contradicting the call modal.
+ *   2. Appends a row per event for registrants who are not on Unstop at all.
+ *
+ * Cancelled and refunded rows are never upgraded: those states are decided on
+ * Unstop and outrank a techfest26.in payment.
+ */
+export function reconcileParticipantsWithTechfest(participants, techfestPayments) {
+  const list = Array.isArray(participants) ? participants : [];
+  const index = buildTechfestPaymentIndex(techfestPayments);
+  if (index.size === 0) return list;
+
+  // A team member is covered by their captain's row, so they would never get one
+  // of their own and could not be called directly. They are tracked separately
+  // so an appended row is still created for them.
+  const primaryEmails = new Set(
+    list.map((p) => normaliseEmail(p?.email)).filter(Boolean)
+  );
+
+  // 1. Promote Unstop rows that also carry a settled techfest26.in payment
+  const enriched = list.map((p) => {
+    if (isParticipantCancelled(p) || isParticipantRefunded(p)) return p;
+    const matches = getTechfestPaymentsFor(index, p);
+    if (!matches.some((r) => r?.paymentStatus === 'completed')) return p;
+    if (p.payment_status === 'PAID' && p.is_paid === true) return p;
+    return { ...p, payment_status: 'PAID', is_paid: true, paid_via_techfest26: true };
+  });
+
+  // 2. Add registrants who never registered on Unstop
+  const records = Array.isArray(techfestPayments?.records) ? techfestPayments.records : [];
+  const appended = [];
+  for (const record of records) {
+    const email = normaliseEmail(record?.email);
+    // Appended unless they already lead a row of their own. Someone who is
+    // only a team member still needs a row, otherwise they cannot be called.
+    if (!email || primaryEmails.has(email)) continue;
+
+    const isPaid = record?.paymentStatus === 'completed';
+    const events = (Array.isArray(record.events) && record.events.length > 0)
+      ? record.events
+      : ['techfest26.in Registration'];
+
+    // One row per event, matching the Unstop shape. The fee is charged per
+    // registration, not per event, so it is carried once on the first row to
+    // stop the per-event totals from counting it repeatedly.
+    events.forEach((eventName, i) => {
+      appended.push({
+        id: `TF26-${record.registrationId}-${i}`,
+        internal_id: null,
+        event_id: null,
+        event_name: eventName,
+        event_type: inferEventType(eventName),
+        name: record.name || 'Unnamed registrant',
+        email: record.email,
+        phone: record.phone || 'N/A',
+        college: record.college || 'N/A',
+        team_name: 'Individual',
+        team_size: 1,
+        team_members: [{
+          name: record.name || 'Unnamed registrant',
+          email: record.email,
+          phone: record.phone || 'N/A',
+          college: record.college || 'N/A',
+          course: ''
+        }],
+        payment_id: record.registrationId,
+        utr: record.utr || '',
+        amount: i === 0 ? (Number(record.amount) || 0) : 0,
+        payment_status: isPaid ? 'PAID' : 'UNPAID',
+        is_paid: isPaid,
+        status_label: isPaid ? 'Paid on techfest26.in' : 'Payment pending on techfest26.in',
+        registered_at: record.createdAt || null,
+        source: 'techfest26',
+        accommodation: record.accommodation === true
+      });
+    });
+  }
+
+  return [...enriched, ...appended];
+}
+
+/**
+ * Places a techfest26.in event into the dashboard's existing categories so the
+ * filter tabs keep working for the appended rows.
+ */
+function inferEventType(eventName) {
+  const name = String(eventName || '').toLowerCase();
+  if (name.includes('quiz')) return 'quizzes';
+  if (name.includes('hackathon')) return 'hackathons';
+  if (name.includes('cultural') || name.includes('jam')) return 'cultural';
+  return 'competitions';
+}
+
+/**
  * Get human-readable payment badge config with distinct colors:
  * - REFUNDED: Purple / Indigo (#7c3aed / bg-purple-50 text-purple-700 border-purple-200)
  * - UNPAID: Amber / Zinc (#d97706 / bg-amber-50 text-amber-800 border-amber-200)

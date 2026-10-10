@@ -29,6 +29,7 @@ from urllib3.util.retry import Retry
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_FILE = os.path.join(BASE_DIR, "data", "techfest26_payments.json")
 OVERRIDE_FILE = os.path.join(BASE_DIR, "data", "payment_status_overrides.json")
+REVIEW_QUEUE_FILE = os.path.join(BASE_DIR, "data", "payment_review_queue.json")
 
 API_KEY = os.environ.get("ADMIN_API_KEY", "").strip()
 BASE_URL = os.environ.get(
@@ -127,36 +128,120 @@ def normalise(record):
     }
 
 
-def load_status_overrides():
-    """Team-confirmed statuses that outrank whatever the API reports.
+def has_payment_evidence(row):
+    """A UTR means the student actually transferred the money.
 
-    The techfest26.in admin API keeps reporting 'pending' until a payment is
-    confirmed on their side, which happens long after the team has verified the
-    UTR. Without this layer the hourly sync would silently undo every manual
-    confirmation on the next run.
+    The admin API keeps reporting 'pending' until someone confirms the payment
+    on the techfest26.in side, which never happens for these UPI registrations.
+    A UTR is the student's own payment reference, so it is the signal we have.
+    """
+    return bool(str(row.get("utr") or "").strip())
+
+
+def load_reviewed_utrs():
+    """UTRs the team has already matched against the bank statement.
+
+    Recorded in data/payment_status_overrides.json as 'statuses', which is kept
+    for the weekly review trail rather than as the source of paid status.
     """
     if not os.path.exists(OVERRIDE_FILE):
         return {}
     try:
         with open(OVERRIDE_FILE, "r", encoding="utf-8") as handle:
             payload = json.load(handle)
-        statuses = payload.get("statuses") or {}
-        return {str(k): str(v) for k, v in statuses.items() if v}
+        reviewed = payload.get("reviewed_utrs") or []
+        return {str(utr).strip() for utr in reviewed if str(utr).strip()}
     except (json.JSONDecodeError, OSError) as exc:
-        log.warning("Could not read %s (%s); ignoring overrides.",
+        log.warning("Could not read %s (%s); ignoring reviewed UTRs.",
                     os.path.basename(OVERRIDE_FILE), exc)
-        return {}
+        return set()
 
 
-def apply_status_overrides(records, overrides):
-    """Force confirmed statuses on top of the snapshot. Returns how many changed."""
-    applied = 0
+def settle_paid_records(records, reviewed_utrs):
+    """Mark UTR-backed records paid, and report the ones still awaiting review.
+
+    Returns (newly_settled, awaiting_review). Only records that actually changed
+    state are counted, so a re-run on an unchanged API produces no diff and CI
+    skips the commit. An explicit override in the statuses map always wins, so
+    a wrong UTR can be pushed back to pending by hand without touching this logic.
+    """
+    override_statuses = {}
+    if os.path.exists(OVERRIDE_FILE):
+        try:
+            with open(OVERRIDE_FILE, "r", encoding="utf-8") as handle:
+                override_statuses = (json.load(handle).get("statuses") or {})
+        except (json.JSONDecodeError, OSError):
+            override_statuses = {}
+
+    newly_settled = 0
+    awaiting_review = []
     for row in records:
-        override = overrides.get(str(row.get("registrationId")))
-        if override and row.get("paymentStatus") != override:
-            row["paymentStatus"] = override
-            applied += 1
-    return applied
+        forced = override_statuses.get(str(row.get("registrationId")))
+        if forced:
+            if row.get("paymentStatus") != forced:
+                row["paymentStatus"] = forced
+                newly_settled += 1
+            continue
+
+        if not has_payment_evidence(row):
+            continue
+
+        utr = str(row["utr"]).strip()
+        # The API always reports 'pending' for these, so this fires on every run.
+        # Counting only real transitions is what keeps CI from committing hourly.
+        if row.get("paymentStatus") != "completed":
+            newly_settled += 1
+        row["paymentStatus"] = "completed"
+        if utr not in reviewed_utrs:
+            awaiting_review.append(row)
+
+    return newly_settled, awaiting_review
+
+
+def write_review_queue(records, reviewed_utrs):
+    """Lists every UTR-backed payment the team has not matched to the bank yet.
+
+    This is the weekly review list: anything still in here has a UTR but has
+    not been confirmed against the bank statement.
+    """
+    unreviewed = [
+        row for row in records
+        if has_payment_evidence(row) and str(row["utr"]).strip() not in reviewed_utrs
+    ]
+    unreviewed.sort(key=lambda r: str(r.get("createdAt") or ""), reverse=True)
+
+    payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "note": (
+            "Payments with a UTR that have not yet been matched against the bank "
+            "statement. Confirm each UTR, then add it to 'reviewed_utrs' in "
+            "data/payment_status_overrides.json to clear it from this list."
+        ),
+        "unreviewed_count": len(unreviewed),
+        "unreviewed_total_amount": round(
+            sum(float(r.get("amount") or 0) for r in unreviewed), 2
+        ),
+        "records": [
+            {
+                "registrationId": r.get("registrationId"),
+                "name": r.get("name"),
+                "email": r.get("email"),
+                "phone": r.get("phone"),
+                "amount": r.get("amount"),
+                "utr": r.get("utr"),
+                "paymentType": r.get("paymentType"),
+                "events": r.get("events") or [],
+                "createdAt": r.get("createdAt"),
+            }
+            for r in unreviewed
+        ],
+    }
+
+    with open(REVIEW_QUEUE_FILE, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True, ensure_ascii=False)
+        handle.write("\n")
+
+    return len(unreviewed)
 
 
 def load_existing():
@@ -173,9 +258,9 @@ def load_existing():
     return {"records": [], "last_synced_at": None}
 
 
-def build_payload(existing, records, overrides=None):
-    """Upsert by registrationId. Records only change when the API says so."""
-    overrides = overrides or {}
+def build_payload(existing, records, reviewed_utrs=None):
+    """Upsert by registrationId, then settle payments that carry a UTR."""
+    reviewed_utrs = reviewed_utrs or set()
     by_id = {}
     for row in existing.get("records", []):
         if row.get("registrationId"):
@@ -189,6 +274,11 @@ def build_payload(existing, records, overrides=None):
         if not reg_id:
             log.warning("Skipping a record without registrationId")
             continue
+
+        # Settle before comparing. The API reports 'pending' forever, so
+        # comparing raw values would mark every record as updated on every run
+        # and commit hourly forever.
+        settle_paid_records([row], reviewed_utrs)
 
         previous = by_id.get(reg_id)
         if previous is None:
@@ -209,9 +299,13 @@ def build_payload(existing, records, overrides=None):
 
     ordered = sorted(by_id.values(), key=lambda r: str(r.get("registrationId")))
 
-    # Team-confirmed statuses win over the API, so a sync never reverts a
-    # payment the team has already verified from its UTR.
-    overridden = apply_status_overrides(ordered, overrides)
+    # Rows carried over from an older snapshot still need settling. Records from
+    # the API were settled above, so only pre-existing rows can transition here.
+    newly_settled = 0
+    for row in ordered:
+        if has_payment_evidence(row) and row.get("paymentStatus") != "completed":
+            settle_paid_records([row], reviewed_utrs)
+            newly_settled += 1
 
     return (
         {
@@ -223,7 +317,7 @@ def build_payload(existing, records, overrides=None):
         added,
         updated,
         unchanged,
-        overridden,
+        newly_settled,
     )
 
 
@@ -240,15 +334,21 @@ def main():
     log.info("API returned %s records", len(records))
 
     existing = load_existing()
-    overrides = load_status_overrides()
-    payload, added, updated, unchanged, overridden = build_payload(existing, records, overrides)
+    reviewed_utrs = load_reviewed_utrs()
+    payload, added, updated, unchanged, newly_settled = build_payload(
+        existing, records, reviewed_utrs
+    )
 
-    log.info("Added %s | Updated %s | Unchanged %s", added, updated, unchanged)
-    if overridden:
-        log.info("Applied %s manual status override(s) from %s",
-                 overridden, os.path.basename(OVERRIDE_FILE))
+    log.info("Added %s | Updated %s | Unchanged %s | newly paid %s",
+             added, updated, unchanged, newly_settled)
 
-    if added == 0 and updated == 0 and overridden == 0:
+    # The review queue is rewritten every run, even on a no-op sync, so the
+    # weekly list never goes stale.
+    pending_review = write_review_queue(payload["records"], reviewed_utrs)
+    log.info("%s payment(s) awaiting bank review -> %s",
+             pending_review, os.path.basename(REVIEW_QUEUE_FILE))
+
+    if added == 0 and updated == 0 and newly_settled == 0:
         log.info("No API changes. Leaving %s untouched so CI skips the commit.", OUTPUT_FILE)
         return 0
 

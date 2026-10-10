@@ -14,7 +14,8 @@ import {
   buildTechfestPaymentIndex,
   getTechfestPaymentsFor,
   getCallPaymentStatus,
-  getCallPaymentBadge
+  getCallPaymentBadge,
+  reconcileParticipantsWithTechfest
 } from '../src/utils/paymentUtils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -128,6 +129,100 @@ for (const p of overlap) {
   if (status.key === 'UNPAID') mismatches += 1;
 }
 check(`all ${overlap.length} overlapping participants resolve to a payment`, mismatches === 0, `${mismatches} showed Unpaid`);
+
+console.log('\ntechfest26.in registrants are merged onto the calling desk');
+const merged = reconcileParticipantsWithTechfest(participants, snapshot);
+const beforeEmails = new Set(participants.map((p) => String(p.email || '').trim().toLowerCase()));
+const afterEmails = new Set(merged.map((p) => String(p.email || '').trim().toLowerCase()));
+check(`rows grew from ${participants.length} to ${merged.length}`, merged.length > participants.length);
+
+// A registrant already on Unstop keeps their Unstop row (upgraded to PAID)
+// rather than gaining a duplicate row, so coverage is asserted by email.
+const mergedByEmail = new Map();
+for (const p of merged) {
+  const email = String(p.email || '').trim().toLowerCase();
+  if (email && !mergedByEmail.has(email)) mergedByEmail.set(email, p);
+}
+const uncovered = records.filter((r) => !mergedByEmail.has(r.email.trim().toLowerCase()));
+check('every techfest26 registrant is represented on the desk',
+  uncovered.length === 0,
+  uncovered.map((r) => r.name).join(', '));
+
+const appended = merged.filter((p) => p.source === 'techfest26');
+
+// A registrant whose Unstop row was refunded and who then re-registered on
+// techfest26.in is intentionally not upgraded: the refund is still the truth on
+// Unstop, and quietly overwriting it would hide the money that went back.
+const refundedOnUnstop = records.filter((r) => {
+  const row = mergedByEmail.get(r.email.trim().toLowerCase());
+  return row && row.payment_status === 'REFUNDED';
+});
+check('a refunded Unstop row is not overwritten by a new payment',
+  refundedOnUnstop.every((r) => r.paymentStatus === 'completed'),
+  `${refundedOnUnstop.length} refunded row(s) were wrongly upgraded`);
+
+const shownUnpaid = records.filter((r) => {
+  const row = mergedByEmail.get(r.email.trim().toLowerCase());
+  return row && row.payment_status !== 'PAID' && row.payment_status !== 'REFUNDED';
+});
+check('no registrant is left showing as unpaid', shownUnpaid.length === 0,
+  shownUnpaid.map((r) => r.name).join(', '));
+
+// Rows are compared per registrant, not per name: common names legitimately
+// repeat across different people.
+const rowsPerRegistrant = records.map((r) => {
+  const email = r.email.trim().toLowerCase();
+  const onUnstop = participants.filter((p) => String(p.email || '').trim().toLowerCase() === email).length;
+  const appendedCount = appended.filter((p) => String(p.email || '').trim().toLowerCase() === email).length;
+  return { name: r.name, email, onUnstop, appendedCount };
+});
+const duplicated = rowsPerRegistrant.filter((x) =>
+  x.onUnstop > 0 && x.appendedCount > 0
+);
+check('an Unstop registrant does not gain duplicate rows', duplicated.length === 0,
+  duplicated.map((x) => x.name).join(', '));
+
+console.log('\nmerged rows carry the fields the calling desk needs');
+check('every appended row has a phone', appended.every((p) => p.phone && p.phone !== 'N/A'));
+check('every appended row has an event name', appended.every((p) => !!p.event_name));
+check('every appended row has a unique id',
+  new Set(appended.map((p) => p.id)).size === appended.length);
+check('paid registrants are marked paid', appended.every((p) => p.payment_status === 'PAID' && p.is_paid === true));
+
+// The fee is charged once per registration. Appending a row per event must not
+// multiply it, so the appended rows for a registration sum to that fee.
+check('the fee is counted once per registration, not per event', (() => {
+  const byReg = new Map();
+  for (const row of appended) {
+    byReg.set(row.payment_id, (byReg.get(row.payment_id) || 0) + Number(row.amount || 0));
+  }
+  const mismatched = [...byReg.entries()].filter(([regId, total]) => {
+    const record = records.find((r) => r.registrationId === regId);
+    return record && Math.abs(Number(record.amount || 0) - total) > 0.01;
+  });
+  return mismatched.length === 0;
+})(), 'per-event rows duplicated the fee');
+
+console.log('\nmerging never contradicts a cancellation or a refund');
+const cancelledRow = {
+  id: 'x1', email: 'cancelled@example.com', is_cancelled: true,
+  payment_status: 'CANCELLED', event_name: 'Hackathon (Karyarachna)'
+};
+const refundedRow = {
+  id: 'x2', email: completed.email, payment_status: 'REFUNDED',
+  amount: 599, event_name: 'Pitchverse (Genesis)'
+};
+const guard = reconcileParticipantsWithTechfest([cancelledRow, refundedRow], {
+  records: [{ ...completed, email: 'cancelled@example.com' }]
+});
+check('a cancelled row stays cancelled', guard[0].payment_status === 'CANCELLED');
+check('a refunded Unstop row is not upgraded to paid', guard[1].payment_status === 'REFUNDED');
+
+console.log('\nmerging is safe when the snapshot has not loaded yet');
+check('empty snapshot returns the list untouched',
+  reconcileParticipantsWithTechfest([cancelledRow], { records: [] }).length === 1);
+check('missing snapshot returns the list untouched',
+  reconcileParticipantsWithTechfest([cancelledRow], null).length === 1);
 
 console.log('');
 if (failures.length) {
