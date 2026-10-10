@@ -28,6 +28,7 @@ from urllib3.util.retry import Retry
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT_FILE = os.path.join(BASE_DIR, "data", "techfest26_payments.json")
+OVERRIDE_FILE = os.path.join(BASE_DIR, "data", "payment_status_overrides.json")
 
 API_KEY = os.environ.get("ADMIN_API_KEY", "").strip()
 BASE_URL = os.environ.get(
@@ -126,6 +127,38 @@ def normalise(record):
     }
 
 
+def load_status_overrides():
+    """Team-confirmed statuses that outrank whatever the API reports.
+
+    The techfest26.in admin API keeps reporting 'pending' until a payment is
+    confirmed on their side, which happens long after the team has verified the
+    UTR. Without this layer the hourly sync would silently undo every manual
+    confirmation on the next run.
+    """
+    if not os.path.exists(OVERRIDE_FILE):
+        return {}
+    try:
+        with open(OVERRIDE_FILE, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+        statuses = payload.get("statuses") or {}
+        return {str(k): str(v) for k, v in statuses.items() if v}
+    except (json.JSONDecodeError, OSError) as exc:
+        log.warning("Could not read %s (%s); ignoring overrides.",
+                    os.path.basename(OVERRIDE_FILE), exc)
+        return {}
+
+
+def apply_status_overrides(records, overrides):
+    """Force confirmed statuses on top of the snapshot. Returns how many changed."""
+    applied = 0
+    for row in records:
+        override = overrides.get(str(row.get("registrationId")))
+        if override and row.get("paymentStatus") != override:
+            row["paymentStatus"] = override
+            applied += 1
+    return applied
+
+
 def load_existing():
     """Previous snapshot, or an empty one when the file is missing or corrupt."""
     if not os.path.exists(OUTPUT_FILE):
@@ -140,8 +173,9 @@ def load_existing():
     return {"records": [], "last_synced_at": None}
 
 
-def build_payload(existing, records):
+def build_payload(existing, records, overrides=None):
     """Upsert by registrationId. Records only change when the API says so."""
+    overrides = overrides or {}
     by_id = {}
     for row in existing.get("records", []):
         if row.get("registrationId"):
@@ -175,6 +209,10 @@ def build_payload(existing, records):
 
     ordered = sorted(by_id.values(), key=lambda r: str(r.get("registrationId")))
 
+    # Team-confirmed statuses win over the API, so a sync never reverts a
+    # payment the team has already verified from its UTR.
+    overridden = apply_status_overrides(ordered, overrides)
+
     return (
         {
             "records": ordered,
@@ -185,6 +223,7 @@ def build_payload(existing, records):
         added,
         updated,
         unchanged,
+        overridden,
     )
 
 
@@ -201,11 +240,15 @@ def main():
     log.info("API returned %s records", len(records))
 
     existing = load_existing()
-    payload, added, updated, unchanged = build_payload(existing, records)
+    overrides = load_status_overrides()
+    payload, added, updated, unchanged, overridden = build_payload(existing, records, overrides)
 
     log.info("Added %s | Updated %s | Unchanged %s", added, updated, unchanged)
+    if overridden:
+        log.info("Applied %s manual status override(s) from %s",
+                 overridden, os.path.basename(OVERRIDE_FILE))
 
-    if added == 0 and updated == 0:
+    if added == 0 and updated == 0 and overridden == 0:
         log.info("No API changes. Leaving %s untouched so CI skips the commit.", OUTPUT_FILE)
         return 0
 
