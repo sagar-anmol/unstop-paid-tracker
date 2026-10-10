@@ -264,7 +264,7 @@ export default function BentoGrid({
               <div>
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">
-                    UNPAID CANDIDATES
+                    NO PAYMENT ON RECORD
                   </span>
                   <span className="font-mono font-bold text-amber-800 text-sm">
                     {unpaidCount.toLocaleString('en-IN')}
@@ -280,9 +280,13 @@ export default function BentoGrid({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                  <span>{unpaidPrecise}% entry fee pending</span>
+                  <span>{unpaidPrecise}% of rows with no payment on record</span>
                   <span className="font-medium text-amber-700">{unpaidCount} / {totalCount}</span>
                 </div>
+                <p className="text-[10px] text-zinc-400 leading-relaxed mt-1">
+                  Most Unstop entries are free, so this is not the same as the entry fee.
+                  Money owed is tracked on the Collected card.
+                </p>
               </div>
 
               {/* Target 3: Cancellation Win-Back */}

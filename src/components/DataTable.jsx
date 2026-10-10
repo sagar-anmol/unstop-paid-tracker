@@ -35,7 +35,9 @@ import {
   isParticipantPaid, 
   isParticipantUnpaid,
   isParticipantCancelled,
-  getPaymentBadgeConfig
+  getPaymentBadgeConfig,
+  isSameEvent,
+  normaliseEventName
 } from '../utils/paymentUtils';
 
 export default function DataTable({ 
@@ -369,17 +371,22 @@ export default function DataTable({
 
       // 4. Event
       if (selectedEvent) {
-        const selEv = selectedEvent.trim().toLowerCase();
         if (isGroupedMode && Array.isArray(p.registeredEventNames)) {
-          const hasEvent = p.registeredEventNames.some(ev => {
-            const pEv = (ev || '').trim().toLowerCase();
-            return pEv === selEv || (activeDomain?.events?.some(canon => canon.toLowerCase() === selEv && (pEv === canon.toLowerCase() || pEv.includes(canon.toLowerCase()))));
-          });
+          const hasEvent = p.registeredEventNames.some(ev =>
+            isSameEvent(ev, selectedEvent) ||
+            activeDomain?.events?.some(canon =>
+              normaliseEventName(canon) === normaliseEventName(selectedEvent) &&
+              (isSameEvent(ev, canon) || normaliseEventName(ev).includes(normaliseEventName(canon)))
+            )
+          );
           if (!hasEvent) return false;
         } else {
-          const pEv = (p.event_name || '').trim().toLowerCase();
-          if (pEv !== selEv) {
-            const isMatch = activeDomain?.events?.some(ev => ev.toLowerCase() === selEv && (pEv === ev.toLowerCase() || pEv.includes(ev.toLowerCase())));
+          const pEv = p.event_name || '';
+          if (!isSameEvent(pEv, selectedEvent)) {
+            const isMatch = activeDomain?.events?.some(ev =>
+              normaliseEventName(ev) === normaliseEventName(selectedEvent) &&
+              (isSameEvent(pEv, ev) || normaliseEventName(pEv).includes(normaliseEventName(ev)))
+            );
             if (!isMatch) return false;
           }
         }
@@ -994,8 +1001,8 @@ export default function DataTable({
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {(() => {
                               const sortedEvents = [...p.events].sort((a, b) => {
-                                if (selectedEvent && a.event_name?.toLowerCase() === selectedEvent.toLowerCase()) return -1;
-                                if (selectedEvent && b.event_name?.toLowerCase() === selectedEvent.toLowerCase()) return 1;
+                                if (selectedEvent && isSameEvent(a.event_name, selectedEvent)) return -1;
+                                if (selectedEvent && isSameEvent(b.event_name, selectedEvent)) return 1;
                                 return 0;
                               });
                               const firstTwo = sortedEvents.slice(0, 2);
@@ -1238,8 +1245,8 @@ export default function DataTable({
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {(() => {
                         const sortedEvents = [...p.events].sort((a, b) => {
-                          if (selectedEvent && a.event_name?.toLowerCase() === selectedEvent.toLowerCase()) return -1;
-                          if (selectedEvent && b.event_name?.toLowerCase() === selectedEvent.toLowerCase()) return 1;
+                          if (selectedEvent && isSameEvent(a.event_name, selectedEvent)) return -1;
+                          if (selectedEvent && isSameEvent(b.event_name, selectedEvent)) return 1;
                           return 0;
                         });
                         const firstTwo = sortedEvents.slice(0, 2);

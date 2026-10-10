@@ -83,6 +83,37 @@ function normaliseEmail(value) {
 }
 
 /**
+ * Reduces an event name to a comparable key so the two registration sources
+ * line up. techfest26.in qualifies every event with its organising club, e.g.
+ * "Robowar (RoboZar)", while Unstop records the bare "Robowar". Comparing the
+ * raw strings finds nothing in common, which made every paid row vanish as soon
+ * as an event filter was applied.
+ *
+ * Trailing parentheticals are dropped repeatedly so nested forms such as
+ * "The Neural Nexus (ML Model) (Plexus)" collapse to the same key as their
+ * Unstop counterpart.
+ */
+export function normaliseEventName(eventName) {
+  let text = String(eventName || '').trim().toLowerCase();
+  let previous = null;
+  while (previous !== text) {
+    previous = text;
+    text = text.replace(/\s*\([^)]*\)\s*$/, '').trim();
+  }
+  return text.replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/**
+ * True when two event names refer to the same competition across sources.
+ */
+export function isSameEvent(a, b) {
+  const left = normaliseEventName(a);
+  const right = normaliseEventName(b);
+  if (!left || !right) return false;
+  return left === right || left.includes(right) || right.includes(left);
+}
+
+/**
  * Builds an email -> payment records index from the techfest26.in snapshot.
  * A registration can be filed under several emails, so every one of them is
  * indexed and points at the same record.
@@ -331,6 +362,17 @@ export function reconcileParticipantsWithTechfest(participants, techfestPayments
   // 2. Add registrants who never registered on Unstop
   const records = Array.isArray(techfestPayments?.records) ? techfestPayments.records : [];
   const appended = [];
+
+  // Reuse the Unstop spelling where the same competition exists there, so the
+  // event filter and the domain badges match on one canonical name.
+  const unstopEventByKey = new Map();
+  for (const p of list) {
+    const key = normaliseEventName(p?.event_name);
+    if (key && !unstopEventByKey.has(key)) {
+      unstopEventByKey.set(key, p.event_name);
+    }
+  }
+
   for (const record of records) {
     const email = normaliseEmail(record?.email);
     // Appended unless they already lead a row of their own. Someone who is
@@ -346,12 +388,14 @@ export function reconcileParticipantsWithTechfest(participants, techfestPayments
     // registration, not per event, so it is carried once on the first row to
     // stop the per-event totals from counting it repeatedly.
     events.forEach((eventName, i) => {
+      const canonicalEvent = unstopEventByKey.get(normaliseEventName(eventName)) || eventName;
       appended.push({
         id: `TF26-${record.registrationId}-${i}`,
         internal_id: null,
         event_id: null,
-        event_name: eventName,
-        event_type: inferEventType(eventName),
+        event_name: canonicalEvent,
+        event_name_source: 'techfest26',
+        event_type: inferEventType(canonicalEvent),
         name: record.name || 'Unnamed registrant',
         email: record.email,
         phone: record.phone || 'N/A',
