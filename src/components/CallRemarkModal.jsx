@@ -31,12 +31,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CALL_STATUSES, getParticipantCallRecord, formatCallTime } from '../utils/callStore';
 import { getDeviceInfo, setCustomDeviceName, getCustomDeviceName } from '../utils/device';
-import { isParticipantCancelled } from '../utils/paymentUtils';
+import { isParticipantCancelled, getCallPaymentStatus, getCallPaymentBadge } from '../utils/paymentUtils';
 
 export default function CallRemarkModal({ 
   isOpen, 
   participant, 
   currentUser, 
+  techfestPaymentIndex,
   onClose, 
   onSubmit 
 }) {
@@ -62,6 +63,10 @@ export default function CallRemarkModal({
 
   const isCancelledParticipant = participant ? isParticipantCancelled(participant) : false;
   const wasReverted = participant?.cancel_reverted === true;
+
+  // Paid / Unpaid state, resolved from techfest26.in payments plus the Unstop row
+  const paymentStatus = participant ? getCallPaymentStatus(participant, techfestPaymentIndex) : null;
+  const paymentBadge = getCallPaymentBadge(paymentStatus);
 
   const CANCEL_REASONS = [
     { value: 'FEE_TOO_HIGH', label: 'Fee too high' },
@@ -222,6 +227,50 @@ export default function CallRemarkModal({
             <span>Redial</span>
           </Button>
         </div>
+
+        {/* Paid / Unpaid field: the caller must know the money status before dialling */}
+        {paymentStatus && (
+          <div className={`mx-5 mt-3 rounded-xl border ${paymentBadge.accent} px-3.5 py-3`}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${paymentBadge.dot}`} />
+                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-500">
+                  Payment
+                </span>
+                <span className={`px-2 py-0.5 rounded-full border text-[10.5px] font-mono font-bold uppercase ${paymentBadge.chip}`}>
+                  {paymentStatus.label}
+                </span>
+              </div>
+              {paymentStatus.amount ? (
+                <span className="font-mono text-sm font-bold text-slate-900 shrink-0">
+                  ₹{paymentStatus.amount.toLocaleString('en-IN')}
+                </span>
+              ) : null}
+            </div>
+
+            {(paymentStatus.utr || paymentStatus.paymentType || paymentStatus.registrationId) && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-mono text-slate-600">
+                {paymentStatus.utr && <span>UTR {paymentStatus.utr}</span>}
+                {paymentStatus.paymentType && <span className="uppercase">via {paymentStatus.paymentType}</span>}
+                {paymentStatus.registrationId && (
+                  <span className="text-slate-400">{paymentStatus.registrationId}</span>
+                )}
+              </div>
+            )}
+
+            <p className="mt-1.5 text-[11px] text-slate-600 leading-relaxed">
+              {paymentStatus.note}
+            </p>
+
+            {paymentStatus.matchedOn &&
+              participant?.email &&
+              paymentStatus.matchedOn !== String(participant.email).trim().toLowerCase() && (
+                <p className="mt-1 text-[10.5px] font-mono text-slate-500">
+                  Matched on {paymentStatus.matchedOn}
+                </p>
+              )}
+          </div>
+        )}
 
         {/* Cancellation win-back panel */}
         {isCancelledParticipant && (

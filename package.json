@@ -11,7 +11,7 @@
     "postbuild": "node scripts/check_bundle.mjs",
     "lint": "eslint src",
     "lint:strict": "eslint src --max-warnings 0",
-    "test": "node scripts/test_password_hashing.mjs && node scripts/check_payment_classification.mjs && python3 scripts/test_payment_reconciliation.py && python3 scripts/test_cancellation_winback.py",
+    "test": "node scripts/test_password_hashing.mjs && node scripts/check_payment_classification.mjs && node scripts/check_call_payment_status.mjs && python3 scripts/test_payment_reconciliation.py && python3 scripts/test_cancellation_winback.py",
     "check:bundle": "node scripts/check_bundle.mjs",
     "verify": "npm run lint && npm run test && npm run build && npm run check:bundle",
     "migrate:neon": "node scripts/init_neon_tables.js",

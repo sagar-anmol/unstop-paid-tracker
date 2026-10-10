@@ -46,7 +46,7 @@ import {
   addAuditLog,
   CALL_STATUSES 
 } from './utils/callStore';
-import { isParticipantCancelled } from './utils/paymentUtils';
+import { isParticipantCancelled, buildTechfestPaymentIndex } from './utils/paymentUtils';
 import { subscribeDbStatus, isDatabaseConfigured } from './utils/neonDb';
 import { recordLoginSession } from './utils/device';
 
@@ -594,6 +594,13 @@ export default function App() {
 
   const pendingVerificationCount = verificationAlerts.disputeCount + verificationAlerts.reviewCount;
 
+  // techfest26.in payments indexed by email so the calling desk can read a
+  // candidate's payment state without leaving the call modal.
+  const techfestPaymentIndex = useMemo(
+    () => buildTechfestPaymentIndex(techfestPayments),
+    [techfestPayments]
+  );
+
   // Cancellations nobody has called yet: the win-back work that is still open
   const [selectedCancelledOnly, setSelectedCancelledOnly] = useState(false);
   const cancelledAwaitingCall = useMemo(() => {
@@ -859,6 +866,7 @@ export default function App() {
         isOpen={isCallModalOpen}
         participant={callingCandidate}
         currentUser={currentUser}
+        techfestPaymentIndex={techfestPaymentIndex}
         onClose={() => {
           setIsCallModalOpen(false);
           setCallingCandidate(null);
