@@ -81,6 +81,20 @@
       "total": 3,
       "unstop": 3
     },
+    "2007loveneet@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Free Fire (Kermis)",
+        "Hackathon (Karyarachna)",
+        "Jugaad (Karyarachna)",
+        "Kritrim - Model Exhibition (Karyarachna)",
+        "Pitchverse (Genesis)"
+      ],
+      "reverted": false,
+      "techfest26": 5,
+      "total": 5,
+      "unstop": 0
+    },
     "2311005@sliet.ac.in": {
       "cancelled": false,
       "events": [
@@ -1908,6 +1922,20 @@
       "total": 1,
       "unstop": 1
     },
+    "anandkumar1207006@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Micromouse Challenge (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "Sky Maneuver (RoboZar)"
+      ],
+      "reverted": false,
+      "techfest26": 5,
+      "total": 5,
+      "unstop": 0
+    },
     "anandmisti20@gmail.com": {
       "cancelled": false,
       "events": [
@@ -2155,15 +2183,22 @@
     "anmolkaurbirdi36@gmail.com": {
       "cancelled": false,
       "events": [
+        "Clue Craze (Food-O-Crats)",
+        "Food Forensics (Food-O-Crats)",
+        "Food Forge (Food-O-Crats)",
+        "Foodprint (Food-O-Crats)",
         "Hackathon",
+        "Hackathon (Karyarachna)",
         "Innovation-X",
         "Kritrim - Model Exhibition",
         "Tech4Earth",
+        "Tech4Earth (Food-O-Crats)",
+        "Techno-Vation (Inventia)",
         "The Aqua-Epoch"
       ],
       "reverted": false,
-      "techfest26": 0,
-      "total": 5,
+      "techfest26": 7,
+      "total": 12,
       "unstop": 5
     },
     "annikanancy680@gmail.com": {
@@ -3056,12 +3091,15 @@
       "cancelled": false,
       "events": [
         "Food Forensics",
+        "Foodprint (Food-O-Crats)",
         "Hackathon",
-        "Pitchverse"
+        "Hackathon (Karyarachna)",
+        "Pitchverse",
+        "Pitchverse (Genesis)"
       ],
       "reverted": false,
-      "techfest26": 0,
-      "total": 3,
+      "techfest26": 3,
+      "total": 6,
       "unstop": 3
     },
     "bansalrohan587@gmail.com": {
@@ -5841,11 +5879,16 @@
     "karanjeet2204@gmail.com": {
       "cancelled": false,
       "events": [
-        "RoboSoccer"
+        "Micromouse Challenge (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer",
+        "RoboSoccer (RoboZar)",
+        "Sky Maneuver (RoboZar)"
       ],
       "reverted": false,
-      "techfest26": 0,
-      "total": 1,
+      "techfest26": 5,
+      "total": 6,
       "unstop": 1
     },
     "karanveersidhu468@gmail.com": {
@@ -6393,6 +6436,20 @@
       "techfest26": 0,
       "total": 1,
       "unstop": 1
+    },
+    "ks3200650@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Circuit Craft (Electronica)",
+        "Heuristic Havoc (Competitive Programming) (Plexus)",
+        "Pixel Wizard (Plexus)",
+        "Quiz Nova (Atomheimer)",
+        "Techno-Vation (Inventia)"
+      ],
+      "reverted": false,
+      "techfest26": 5,
+      "total": 5,
+      "unstop": 0
     },
     "kuldeepwankhede53@gmail.com": {
       "cancelled": false,
@@ -7890,6 +7947,20 @@
       "techfest26": 0,
       "total": 1,
       "unstop": 1
+    },
+    "mohitkumar09825@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Free Fire (Kermis)",
+        "Hackathon (Karyarachna)",
+        "Jugaad (Karyarachna)",
+        "Kritrim - Model Exhibition (Karyarachna)",
+        "Pitchverse (Genesis)"
+      ],
+      "reverted": false,
+      "techfest26": 5,
+      "total": 5,
+      "unstop": 0
     },
     "moimransaifi11@gmail.com": {
       "cancelled": false,
@@ -12449,11 +12520,16 @@
     "sikarwarabhishek617@gmail.com": {
       "cancelled": false,
       "events": [
-        "RoboSoccer"
+        "Micromouse Challenge (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer",
+        "RoboSoccer (RoboZar)",
+        "Sky Maneuver (RoboZar)"
       ],
       "reverted": false,
-      "techfest26": 0,
-      "total": 1,
+      "techfest26": 5,
+      "total": 6,
       "unstop": 1
     },
     "simarmakkar321@gmail.com": {
@@ -12671,6 +12747,20 @@
       "techfest26": 0,
       "total": 1,
       "unstop": 1
+    },
+    "siyajhamb7@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Circuit Craft (Electronica)",
+        "Heuristic Havoc (Competitive Programming) (Plexus)",
+        "Pixel Wizard (Plexus)",
+        "Quiz Nova (Atomheimer)",
+        "Techno-Vation (Inventia)"
+      ],
+      "reverted": false,
+      "techfest26": 5,
+      "total": 5,
+      "unstop": 0
     },
     "sk0078940@gmail.com": {
       "cancelled": false,
@@ -13413,6 +13503,19 @@
       "total": 1,
       "unstop": 1
     },
+    "sunsingh7947@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Aqua Clean (Atomheimer)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)"
+      ],
+      "reverted": false,
+      "techfest26": 4,
+      "total": 4,
+      "unstop": 0
+    },
     "supanpreet60@gmail.com": {
       "cancelled": false,
       "events": [
@@ -13869,6 +13972,19 @@
       "techfest26": 0,
       "total": 2,
       "unstop": 2
+    },
+    "tridip540@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Aqua Clean (Atomheimer)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)"
+      ],
+      "reverted": false,
+      "techfest26": 4,
+      "total": 4,
+      "unstop": 0
     },
     "u.rai182010@gmail.com": {
       "cancelled": false,
@@ -14612,6 +14728,20 @@
       "total": 6,
       "unstop": 6
     },
+    "ys8125262@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Circuit Craft (Electronica)",
+        "Heuristic Havoc (Competitive Programming) (Plexus)",
+        "Pixel Wizard (Plexus)",
+        "Quiz Nova (Atomheimer)",
+        "Techno-Vation (Inventia)"
+      ],
+      "reverted": false,
+      "techfest26": 5,
+      "total": 5,
+      "unstop": 0
+    },
     "yuktah.te23@bmsce.ac.in": {
       "cancelled": false,
       "events": [
@@ -14693,8 +14823,8 @@
       "unstop": 61
     }
   },
-  "generated_at": "2026-10-10T07:13:04.628006+00:00",
+  "generated_at": "2026-10-10T13:47:58.995193+00:00",
   "note": "email -> events entered. Generated by scripts/build_participant_events_index.py",
-  "people": 1083,
+  "people": 1091,
   "unstop_people": 1044
 }
