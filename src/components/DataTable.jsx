@@ -34,7 +34,10 @@ import {
   isParticipantRefunded, 
   isParticipantPaid, 
   isParticipantUnpaid,
-  isParticipantCancelled
+  isParticipantCancelled,
+  getPaymentBadgeConfig,
+  isSameEvent,
+  normaliseEventName
 } from '../utils/paymentUtils';
 
 export default function DataTable({ 
@@ -368,17 +371,22 @@ export default function DataTable({
 
       // 4. Event
       if (selectedEvent) {
-        const selEv = selectedEvent.trim().toLowerCase();
         if (isGroupedMode && Array.isArray(p.registeredEventNames)) {
-          const hasEvent = p.registeredEventNames.some(ev => {
-            const pEv = (ev || '').trim().toLowerCase();
-            return pEv === selEv || (activeDomain?.events?.some(canon => canon.toLowerCase() === selEv && (pEv === canon.toLowerCase() || pEv.includes(canon.toLowerCase()))));
-          });
+          const hasEvent = p.registeredEventNames.some(ev =>
+            isSameEvent(ev, selectedEvent) ||
+            activeDomain?.events?.some(canon =>
+              normaliseEventName(canon) === normaliseEventName(selectedEvent) &&
+              (isSameEvent(ev, canon) || normaliseEventName(ev).includes(normaliseEventName(canon)))
+            )
+          );
           if (!hasEvent) return false;
         } else {
-          const pEv = (p.event_name || '').trim().toLowerCase();
-          if (pEv !== selEv) {
-            const isMatch = activeDomain?.events?.some(ev => ev.toLowerCase() === selEv && (pEv === ev.toLowerCase() || pEv.includes(ev.toLowerCase())));
+          const pEv = p.event_name || '';
+          if (!isSameEvent(pEv, selectedEvent)) {
+            const isMatch = activeDomain?.events?.some(ev =>
+              normaliseEventName(ev) === normaliseEventName(selectedEvent) &&
+              (isSameEvent(pEv, ev) || normaliseEventName(pEv).includes(normaliseEventName(ev)))
+            );
             if (!isMatch) return false;
           }
         }
@@ -742,6 +750,7 @@ export default function DataTable({
               <th className="py-2.5 px-3 min-w-[190px]">Phone & Direct Calling</th>
               <th className="py-2.5 px-3 min-w-[180px]">Institution & Course</th>
               <th className="py-2.5 px-3 min-w-[180px]">Competition & Domain</th>
+              <th className="py-2.5 px-3 min-w-[130px]">Payment Status</th>
               <th className="py-2.5 px-3 min-w-[130px]">Team Roster</th>
               <th className="py-2.5 px-3 w-12 text-center">Action</th>
             </tr>
@@ -992,8 +1001,8 @@ export default function DataTable({
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {(() => {
                               const sortedEvents = [...p.events].sort((a, b) => {
-                                if (selectedEvent && a.event_name?.toLowerCase() === selectedEvent.toLowerCase()) return -1;
-                                if (selectedEvent && b.event_name?.toLowerCase() === selectedEvent.toLowerCase()) return 1;
+                                if (selectedEvent && isSameEvent(a.event_name, selectedEvent)) return -1;
+                                if (selectedEvent && isSameEvent(b.event_name, selectedEvent)) return 1;
                                 return 0;
                               });
                               const firstTwo = sortedEvents.slice(0, 2);
@@ -1065,6 +1074,44 @@ export default function DataTable({
                           </div>
                         </div>
                       )}
+                    </td>
+
+                    {/* Payment Status - at a glance, so a caller never has to open a row */}
+                    <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
+                      {(() => {
+                        const rowCancelled = isParticipantCancelled(p);
+                        const rowRefunded = isParticipantRefunded(p);
+                        const rowPaid = isParticipantPaid(p);
+                        const badge = getPaymentBadgeConfig(p);
+
+                        const tone = rowCancelled || rowRefunded
+                          ? 'bg-violet-50 text-violet-700 border-violet-200'
+                          : rowPaid
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-amber-50 text-amber-800 border-amber-200';
+                        const amt = Number(p.amount) || 0;
+
+                        // Grouped rows span several event registrations, so the
+                        // amount is the sum the row itself already carries.
+                        return (
+                          <div className="space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => onSelectParticipant(p)}
+                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10.5px] font-mono font-bold uppercase cursor-pointer hover:brightness-95 ${tone}`}
+                              title={badge.fullText}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${badge.indicatorClass}`} />
+                              <span>{badge.pillText}</span>
+                            </button>
+                            {rowPaid && amt > 0 && (
+                              <div className="text-[10px] font-mono text-slate-500">
+                                {p.source === 'techfest26' ? 'techfest26.in' : 'unstop'}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     {/* Team Roster */}
@@ -1172,6 +1219,21 @@ export default function DataTable({
                             {p.eventsCount} Events
                           </span>
                         )}
+                        {/* Payment status, same colour language as the table */}
+                        {(() => {
+                          const mBadge = getPaymentBadgeConfig(p);
+                          const mTone = isParticipantCancelled(p) || isParticipantRefunded(p)
+                            ? 'bg-violet-50 text-violet-700 border-violet-200'
+                            : isParticipantPaid(p)
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-amber-50 text-amber-800 border-amber-200';
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9.5px] font-mono font-bold uppercase border shrink-0 ${mTone}`}>
+                              <span className={`w-1 h-1 rounded-full ${mBadge.indicatorClass}`} />
+                              {mBadge.pillText}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <div className="text-[11px] font-mono text-slate-500 truncate">{p.email || 'N/A'}</div>
                     </div>
@@ -1183,8 +1245,8 @@ export default function DataTable({
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {(() => {
                         const sortedEvents = [...p.events].sort((a, b) => {
-                          if (selectedEvent && a.event_name?.toLowerCase() === selectedEvent.toLowerCase()) return -1;
-                          if (selectedEvent && b.event_name?.toLowerCase() === selectedEvent.toLowerCase()) return 1;
+                          if (selectedEvent && isSameEvent(a.event_name, selectedEvent)) return -1;
+                          if (selectedEvent && isSameEvent(b.event_name, selectedEvent)) return 1;
                           return 0;
                         });
                         const firstTwo = sortedEvents.slice(0, 2);

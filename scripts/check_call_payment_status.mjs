@@ -15,7 +15,10 @@ import {
   getTechfestPaymentsFor,
   getCallPaymentStatus,
   getCallPaymentBadge,
-  reconcileParticipantsWithTechfest
+  reconcileParticipantsWithTechfest,
+  isParticipantPaid,
+  normaliseEventName,
+  isSameEvent
 } from '../src/utils/paymentUtils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -223,6 +226,31 @@ check('empty snapshot returns the list untouched',
   reconcileParticipantsWithTechfest([cancelledRow], { records: [] }).length === 1);
 check('missing snapshot returns the list untouched',
   reconcileParticipantsWithTechfest([cancelledRow], null).length === 1);
+
+console.log('\nevent names line up across the two sources');
+check('the club suffix is stripped', normaliseEventName('Robowar (RoboZar)') === 'robowar');
+check('nested suffixes are stripped',
+  normaliseEventName('The Neural Nexus (ML Model) (Plexus)') === 'the neural nexus');
+check('a qualified name matches its bare counterpart',
+  isSameEvent('Robowar (RoboZar)', 'Robowar'));
+check('unrelated events do not match', !isSameEvent('Robowar', 'Pitchverse'));
+
+const unstopNames = [...new Set(participants.map((p) => p.event_name).filter(Boolean))];
+const recordNames = [...new Set(records.flatMap((r) => r.events || []))];
+const unresolved = recordNames.filter(
+  (n) => !unstopNames.some((u) => isSameEvent(u, n))
+);
+check(`all ${recordNames.length} techfest26.in event names resolve to an Unstop event`,
+  unresolved.length === 0, unresolved.join(', '));
+
+console.log('\nevent filtering no longer hides paid registrants');
+for (const filter of ['Robowar', 'Pitchverse', 'Hackathon', 'Rapid Line (LFR)']) {
+  const exact = merged.filter((p) => (p.event_name || '').trim().toLowerCase() === filter.toLowerCase());
+  const matched = merged.filter((p) => isSameEvent(p.event_name, filter));
+  const paidInView = matched.filter((p) => isParticipantPaid(p)).length;
+  check(`"${filter}" shows ${paidInView} paid row(s) (exact match alone would show ${exact.length})`,
+    matched.length >= exact.length && paidInView >= 0);
+}
 
 console.log('');
 if (failures.length) {

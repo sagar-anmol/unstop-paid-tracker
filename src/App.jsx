@@ -46,7 +46,7 @@ import {
   addAuditLog,
   CALL_STATUSES 
 } from './utils/callStore';
-import { isParticipantCancelled, buildTechfestPaymentIndex, reconcileParticipantsWithTechfest } from './utils/paymentUtils';
+import { isParticipantCancelled, buildTechfestPaymentIndex, reconcileParticipantsWithTechfest, isSameEvent } from './utils/paymentUtils';
 import { subscribeDbStatus, isDatabaseConfigured } from './utils/neonDb';
 import { recordLoginSession } from './utils/device';
 
@@ -328,13 +328,9 @@ export default function App() {
   // Displayed participants (applying event filter if set)
   const displayedParticipants = useMemo(() => {
     if (!selectedEventFilter) return scopedParticipants;
-    const query = selectedEventFilter.toLowerCase().trim();
-    const exactMatches = scopedParticipants.filter(p => (p.event_name || '').toLowerCase().trim() === query);
-    if (exactMatches.length > 0) return exactMatches;
-    return scopedParticipants.filter(p => {
-      const target = (p.event_name || '').toLowerCase().trim();
-      return target.includes(query) || query.includes(target);
-    });
+    // Matched through the shared normaliser so a techfest26.in event such as
+    // "Robowar (RoboZar)" matches the Unstop row for "Robowar".
+    return scopedParticipants.filter(p => isSameEvent(p.event_name, selectedEventFilter));
   }, [scopedParticipants, selectedEventFilter]);
 
   // Handle CSV Export
