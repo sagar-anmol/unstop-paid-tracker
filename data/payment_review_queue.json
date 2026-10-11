@@ -1,7 +1,41 @@
 {
-  "generated_at": "2026-10-11T01:57:42.142109+00:00",
+  "generated_at": "2026-10-11T08:58:34.913402+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 1797,
+      "createdAt": "2026-10-11T08:34:14.882Z",
+      "email": "yugg4950@gmail.com",
+      "events": [
+        "Rapid Line (LFR) (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "RC Car (RoboZar)",
+        "Micromouse Challenge (RoboZar)"
+      ],
+      "name": "Yogesh",
+      "paymentType": "upi",
+      "phone": "9991656728",
+      "registrationId": "REG1791707654881",
+      "utr": "915491302509"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-11T06:12:04.392Z",
+      "email": "sa8179151@gmail.com",
+      "events": [
+        "Rapid Line (LFR) (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "Hovermania (RoboZar)",
+        "RC Boat (RoboZar)",
+        "Breadboard Battle (Electrica)"
+      ],
+      "name": "Md saddab ansari ",
+      "paymentType": "upi",
+      "phone": "6201344922",
+      "registrationId": "REG1791699124387",
+      "utr": "628411851912"
+    },
     {
       "amount": 599,
       "createdAt": "2026-10-10T15:08:04.162Z",
@@ -120,6 +154,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 7,
-  "unreviewed_total_amount": 7787.0
+  "unreviewed_count": 9,
+  "unreviewed_total_amount": 10183.0
 }
