@@ -1,7 +1,40 @@
 {
-  "generated_at": "2026-10-11T08:58:34.913402+00:00",
+  "generated_at": "2026-10-11T15:45:45.953496+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 1198,
+      "createdAt": "2026-10-11T14:55:06.702Z",
+      "email": "k.metha66@gmail.com",
+      "events": [
+        "Kritrim - Model Exhibition (Karyarachna)",
+        "Hackathon (Karyarachna)",
+        "Chess (Kermis)",
+        "BGMI (Kermis)",
+        "Pitchverse (Genesis)",
+        "Jugaad (Karyarachna)"
+      ],
+      "name": "Khush Metha",
+      "paymentType": "upi",
+      "phone": "9257062975",
+      "registrationId": "REG1791730506697",
+      "utr": "664945731865"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-11T13:47:52.702Z",
+      "email": "ridhimag0007@gmail.com",
+      "events": [
+        "Pitchverse (Genesis)",
+        "Hackathon (Karyarachna)",
+        "Ghost Code (Plexus)"
+      ],
+      "name": "Ridhima Gupta",
+      "paymentType": "upi",
+      "phone": "9915213566",
+      "registrationId": "REG1791726472700",
+      "utr": "217833172466"
+    },
     {
       "amount": 1797,
       "createdAt": "2026-10-11T08:34:14.882Z",
@@ -154,6 +187,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 9,
-  "unreviewed_total_amount": 10183.0
+  "unreviewed_count": 11,
+  "unreviewed_total_amount": 11980.0
 }
