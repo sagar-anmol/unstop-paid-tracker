@@ -1,7 +1,22 @@
 {
-  "generated_at": "2026-10-12T00:36:14.334476+00:00",
+  "generated_at": "2026-10-12T07:25:33.097101+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 599,
+      "createdAt": "2026-10-12T06:04:57.682Z",
+      "email": "snirmalsingh242@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)",
+        "Free Fire (Kermis)",
+        "Pitchverse (Genesis)"
+      ],
+      "name": "Nirmal Singh",
+      "paymentType": "upi",
+      "phone": "7696952120",
+      "registrationId": "REG1791785097673",
+      "utr": "005793812929"
+    },
     {
       "amount": 1198,
       "createdAt": "2026-10-11T14:55:06.702Z",
@@ -187,6 +202,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 11,
-  "unreviewed_total_amount": 11980.0
+  "unreviewed_count": 12,
+  "unreviewed_total_amount": 12579.0
 }
