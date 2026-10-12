@@ -1,7 +1,89 @@
 {
-  "generated_at": "2026-10-12T07:25:33.097101+00:00",
+  "generated_at": "2026-10-12T17:59:30.877688+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 897,
+      "createdAt": "2026-10-12T15:29:37.941Z",
+      "email": "swastiksukirti@gmail.com",
+      "events": [
+        "Case Crack (Genesis)"
+      ],
+      "name": "Swastik Sharma",
+      "paymentType": "upi",
+      "phone": "7986917516",
+      "registrationId": "REG1791818977936",
+      "utr": "217925189378"
+    },
+    {
+      "amount": 1198,
+      "createdAt": "2026-10-12T13:27:42.875Z",
+      "email": "divyanshdk0107@gmail.com",
+      "events": [
+        "Kritrim - Model Exhibition (Karyarachna)"
+      ],
+      "name": "Divyansh",
+      "paymentType": "upi",
+      "phone": "9592244555",
+      "registrationId": "REG1791811662873",
+      "utr": "628593985390"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-12T11:20:46.731Z",
+      "email": "sukhpreetkaur32764@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)"
+      ],
+      "name": "Sukhpreet Kaur",
+      "paymentType": "upi",
+      "phone": "9872891264",
+      "registrationId": "REG1791804046727",
+      "utr": "217898269108"
+    },
+    {
+      "amount": 2396,
+      "createdAt": "2026-10-12T11:19:47.010Z",
+      "email": "ps1300426@gmail.com",
+      "events": [
+        "Rapid Line (LFR) (RoboZar)",
+        "RC Car (RoboZar)",
+        "Hackathon (Karyarachna)",
+        "Arduino Imagino (Electronica)",
+        "WPTC - Wireless Power Transfer (Electrica)"
+      ],
+      "name": "Parul Sharma",
+      "paymentType": "upi",
+      "phone": "9413913788",
+      "registrationId": "REG1791803987008",
+      "utr": "217897610211"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-12T11:14:39.851Z",
+      "email": "tusharpb0329@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)"
+      ],
+      "name": "Tushar",
+      "paymentType": "upi",
+      "phone": "9041022030",
+      "registrationId": "REG1791803679849",
+      "utr": "628550772427"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-12T10:03:28.836Z",
+      "email": "899.simar@gmail.com",
+      "events": [
+        "Kritrim - Model Exhibition (Karyarachna)"
+      ],
+      "name": "Simarjit Kaur",
+      "paymentType": "upi",
+      "phone": "9878578941",
+      "registrationId": "REG1791799408834",
+      "utr": "628570727311"
+    },
     {
       "amount": 599,
       "createdAt": "2026-10-12T06:04:57.682Z",
@@ -202,6 +284,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 12,
-  "unreviewed_total_amount": 12579.0
+  "unreviewed_count": 18,
+  "unreviewed_total_amount": 18867.0
 }
