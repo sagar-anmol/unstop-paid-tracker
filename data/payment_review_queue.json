@@ -1,7 +1,87 @@
 {
-  "generated_at": "2026-10-13T07:47:01.308754+00:00",
+  "generated_at": "2026-10-13T16:03:47.766999+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 1198,
+      "createdAt": "2026-10-13T15:10:14.661Z",
+      "email": "jatinnawariya2006@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)",
+        "Pitchverse (Genesis)",
+        "Kritrim - Model Exhibition (Karyarachna)"
+      ],
+      "name": "Jatin Nawariya",
+      "paymentType": "upi",
+      "phone": "9877809140",
+      "registrationId": "REG1791904214659",
+      "utr": "218003376354"
+    },
+    {
+      "amount": 1198,
+      "createdAt": "2026-10-13T14:11:56.954Z",
+      "email": "amit.mahindra765@gmail.com",
+      "events": [
+        "Kritrim - Model Exhibition (Karyarachna)",
+        "Hackathon (Karyarachna)"
+      ],
+      "name": "Amit Kumar Mahindra",
+      "paymentType": "upi",
+      "phone": "9041295911",
+      "registrationId": "REG1791900716950",
+      "utr": "217990421400"
+    },
+    {
+      "amount": 1797,
+      "createdAt": "2026-10-13T12:58:48.313Z",
+      "email": "kirnakumari488@gmail.com",
+      "events": [
+        "Pitchverse (Genesis)",
+        "Chemi-Thone (Chemica)",
+        "Soap Making (Chemica)",
+        "Technical Quiz Competition (Civicon)",
+        "Chemi Craft (Chemica)"
+      ],
+      "name": "Kirna Kumari ",
+      "paymentType": "upi",
+      "phone": "9103707021",
+      "registrationId": "REG1791896328308",
+      "utr": "049381105296"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T10:16:22.903Z",
+      "email": "ashishkrrajput4203@gmail.com",
+      "events": [
+        "Robowar (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Micromouse Challenge (RoboZar)"
+      ],
+      "name": "Ashish Kumar Singh",
+      "paymentType": "upi",
+      "phone": "8434441298",
+      "registrationId": "REG1791886582902",
+      "utr": "628602077334"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T10:13:24.861Z",
+      "email": "ashishkrrajput4203@gmail.com",
+      "events": [
+        "RoboSoccer (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "Sky Maneuver (RoboZar)"
+      ],
+      "name": "Ashish Kumar Singh",
+      "paymentType": "upi",
+      "phone": "8434441298",
+      "registrationId": "REG1791886404859",
+      "utr": "628602077333"
+    },
     {
       "amount": 599,
       "createdAt": "2026-10-13T07:46:46.866Z",
@@ -363,6 +443,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 22,
-  "unreviewed_total_amount": 25456.0
+  "unreviewed_count": 27,
+  "unreviewed_total_amount": 30847.0
 }
