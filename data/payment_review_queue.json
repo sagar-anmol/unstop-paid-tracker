@@ -1,7 +1,36 @@
 {
-  "generated_at": "2026-10-12T17:59:30.877688+00:00",
+  "generated_at": "2026-10-13T00:46:06.432596+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 4792,
+      "createdAt": "2026-10-12T18:11:03.065Z",
+      "email": "quintetrobotics@gmail.com",
+      "events": [
+        "Robowar (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "Hovermania (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "Circuit Craft (Electronica)",
+        "Designare (Mechanica)",
+        "Ghost Code (Plexus)",
+        "Digital Design Challenge (Electronica)",
+        "Breadboard Battle (Electrica)",
+        "Soldering Speedrun (Electrica)",
+        "Grid Masters - SLD Challenge (Electrica)",
+        "WPTC - Wireless Power Transfer (Electrica)",
+        "Aerostrike (Atomheimer)"
+      ],
+      "name": "Deep Naik",
+      "paymentType": "upi",
+      "phone": "9028796818",
+      "registrationId": "REG1791828663061",
+      "utr": "233929994217"
+    },
     {
       "amount": 897,
       "createdAt": "2026-10-12T15:29:37.941Z",
@@ -284,6 +313,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 18,
-  "unreviewed_total_amount": 18867.0
+  "unreviewed_count": 19,
+  "unreviewed_total_amount": 23659.0
 }

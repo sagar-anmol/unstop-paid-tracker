@@ -1826,6 +1826,32 @@
       "total": 6,
       "unstop": 6
     },
+    "amoghburte@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Aerostrike (Atomheimer)",
+        "Breadboard Battle (Electrica)",
+        "Circuit Craft (Electronica)",
+        "Designare (Mechanica)",
+        "Digital Design Challenge (Electronica)",
+        "Ghost Code (Plexus)",
+        "Grid Masters - SLD Challenge (Electrica)",
+        "Hovermania (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "Robowar (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "Soldering Speedrun (Electrica)",
+        "WPTC - Wireless Power Transfer (Electrica)"
+      ],
+      "reverted": false,
+      "techfest26": 17,
+      "total": 17,
+      "unstop": 0
+    },
     "anadichauhan454@gmail.com": {
       "cancelled": false,
       "events": [
@@ -4674,6 +4700,32 @@
       "total": 3,
       "unstop": 3
     },
+    "guptaanurag3732@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Aerostrike (Atomheimer)",
+        "Breadboard Battle (Electrica)",
+        "Circuit Craft (Electronica)",
+        "Designare (Mechanica)",
+        "Digital Design Challenge (Electronica)",
+        "Ghost Code (Plexus)",
+        "Grid Masters - SLD Challenge (Electrica)",
+        "Hovermania (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "Robowar (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "Soldering Speedrun (Electrica)",
+        "WPTC - Wireless Power Transfer (Electrica)"
+      ],
+      "reverted": false,
+      "techfest26": 17,
+      "total": 17,
+      "unstop": 0
+    },
     "guptashrey345@gmail.com": {
       "cancelled": false,
       "events": [
@@ -5281,6 +5333,32 @@
       "techfest26": 0,
       "total": 2,
       "unstop": 2
+    },
+    "imayank2007@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Aerostrike (Atomheimer)",
+        "Breadboard Battle (Electrica)",
+        "Circuit Craft (Electronica)",
+        "Designare (Mechanica)",
+        "Digital Design Challenge (Electronica)",
+        "Ghost Code (Plexus)",
+        "Grid Masters - SLD Challenge (Electrica)",
+        "Hovermania (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "Robowar (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "Soldering Speedrun (Electrica)",
+        "WPTC - Wireless Power Transfer (Electrica)"
+      ],
+      "reverted": false,
+      "techfest26": 17,
+      "total": 17,
+      "unstop": 0
     },
     "inderjita71@gmail.com": {
       "cancelled": false,
@@ -10003,11 +10081,28 @@
     "quintetrobotics@gmail.com": {
       "cancelled": false,
       "events": [
-        "Soldering Speedrun"
+        "Aerostrike (Atomheimer)",
+        "Breadboard Battle (Electrica)",
+        "Circuit Craft (Electronica)",
+        "Designare (Mechanica)",
+        "Digital Design Challenge (Electronica)",
+        "Ghost Code (Plexus)",
+        "Grid Masters - SLD Challenge (Electrica)",
+        "Hovermania (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "Robowar (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "Soldering Speedrun",
+        "Soldering Speedrun (Electrica)",
+        "WPTC - Wireless Power Transfer (Electrica)"
       ],
       "reverted": false,
-      "techfest26": 0,
-      "total": 1,
+      "techfest26": 17,
+      "total": 18,
       "unstop": 1
     },
     "r0hiiittt209@gmail.com": {
@@ -11792,6 +11887,32 @@
       "total": 1,
       "unstop": 1
     },
+    "saurabhsuryavanshi8120@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Aerostrike (Atomheimer)",
+        "Breadboard Battle (Electrica)",
+        "Circuit Craft (Electronica)",
+        "Designare (Mechanica)",
+        "Digital Design Challenge (Electronica)",
+        "Ghost Code (Plexus)",
+        "Grid Masters - SLD Challenge (Electrica)",
+        "Hovermania (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "Robowar (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "Soldering Speedrun (Electrica)",
+        "WPTC - Wireless Power Transfer (Electrica)"
+      ],
+      "reverted": false,
+      "techfest26": 17,
+      "total": 17,
+      "unstop": 0
+    },
     "sayandipmondal607@gmail.com": {
       "cancelled": false,
       "events": [
@@ -12191,6 +12312,32 @@
       "techfest26": 0,
       "total": 1,
       "unstop": 1
+    },
+    "shettyadarsh342@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Aerostrike (Atomheimer)",
+        "Breadboard Battle (Electrica)",
+        "Circuit Craft (Electronica)",
+        "Designare (Mechanica)",
+        "Digital Design Challenge (Electronica)",
+        "Ghost Code (Plexus)",
+        "Grid Masters - SLD Challenge (Electrica)",
+        "Hovermania (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "Robowar (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "Soldering Speedrun (Electrica)",
+        "WPTC - Wireless Power Transfer (Electrica)"
+      ],
+      "reverted": false,
+      "techfest26": 17,
+      "total": 17,
+      "unstop": 0
     },
     "shibamchakrovorty@gmail.com": {
       "cancelled": false,
@@ -13407,6 +13554,32 @@
       "total": 1,
       "unstop": 1
     },
+    "srujansaswade@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Aerostrike (Atomheimer)",
+        "Breadboard Battle (Electrica)",
+        "Circuit Craft (Electronica)",
+        "Designare (Mechanica)",
+        "Digital Design Challenge (Electronica)",
+        "Ghost Code (Plexus)",
+        "Grid Masters - SLD Challenge (Electrica)",
+        "Hovermania (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "Robowar (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "Soldering Speedrun (Electrica)",
+        "WPTC - Wireless Power Transfer (Electrica)"
+      ],
+      "reverted": false,
+      "techfest26": 17,
+      "total": 17,
+      "unstop": 0
+    },
     "ss5890073@gmail.com": {
       "cancelled": false,
       "events": [
@@ -14003,6 +14176,32 @@
       "techfest26": 0,
       "total": 27,
       "unstop": 27
+    },
+    "temkarvighnesh8@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Aerostrike (Atomheimer)",
+        "Breadboard Battle (Electrica)",
+        "Circuit Craft (Electronica)",
+        "Designare (Mechanica)",
+        "Digital Design Challenge (Electronica)",
+        "Ghost Code (Plexus)",
+        "Grid Masters - SLD Challenge (Electrica)",
+        "Hovermania (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "Robowar (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "Soldering Speedrun (Electrica)",
+        "WPTC - Wireless Power Transfer (Electrica)"
+      ],
+      "reverted": false,
+      "techfest26": 17,
+      "total": 17,
+      "unstop": 0
     },
     "thakuranjali54525@gmail.com": {
       "cancelled": false,
@@ -15073,8 +15272,8 @@
       "unstop": 61
     }
   },
-  "generated_at": "2026-10-12T17:59:31.037758+00:00",
+  "generated_at": "2026-10-13T00:46:06.619742+00:00",
   "note": "email -> events entered. Generated by scripts/build_participant_events_index.py",
-  "people": 1111,
+  "people": 1118,
   "unstop_people": 1044
 }
