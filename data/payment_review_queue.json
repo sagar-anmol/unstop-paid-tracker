@@ -1,7 +1,213 @@
 {
-  "generated_at": "2026-10-13T16:03:47.766999+00:00",
+  "generated_at": "2026-10-13T21:19:08.584570+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T18:48:37.034Z",
+      "email": "sahaykrishika07@gmail.com",
+      "events": [
+        "Jam Session (Chemica)",
+        "Hackathon (Karyarachna)",
+        "SM-Agri (Inventia)"
+      ],
+      "name": "Krishika Sahay",
+      "paymentType": "upi",
+      "phone": "7217681947",
+      "registrationId": "REG1791917317033",
+      "utr": "665392134156"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T18:42:06.779Z",
+      "email": "agnaypv3@gmail.com",
+      "events": [
+        "BGMI (Kermis)",
+        "CAD Design Challenge (Civicon)",
+        "Soldering Speedrun (Electrica)",
+        "Hackathon (Karyarachna)",
+        "Debug & Deploy (Plexus)"
+      ],
+      "name": "Agnay Pv",
+      "paymentType": "upi",
+      "phone": "9037327674",
+      "registrationId": "REG1791916926778",
+      "utr": "665338533000"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T18:41:56.788Z",
+      "email": "kashishchouhan129@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)",
+        "Pitchverse (Genesis)",
+        "Brand Blitz (Genesis)",
+        "Jam Session (Chemica)",
+        "SM-Agri (Inventia)"
+      ],
+      "name": "Kashish Chouhan",
+      "paymentType": "upi",
+      "phone": "9816720169",
+      "registrationId": "REG1791916916786",
+      "utr": "218015583870"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T18:39:33.539Z",
+      "email": "purvathakur9041@gmail.com",
+      "events": [
+        "Robowar (RoboZar)",
+        "SM-Agri (Inventia)",
+        "Pixel Wizard (Plexus)",
+        "Brand Blitz (Genesis)",
+        "CAD Design Challenge (Civicon)"
+      ],
+      "name": "Purva Thakur",
+      "paymentType": "upi",
+      "phone": "9463388044",
+      "registrationId": "REG1791916773538",
+      "utr": "665392104184"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T18:33:28.839Z",
+      "email": "singhrajawatnaitik@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)",
+        "Pitchverse (Genesis)",
+        "Brand Blitz (Genesis)",
+        "SM-Agri (Inventia)",
+        "RC Car (RoboZar)"
+      ],
+      "name": "naitik singh rajawat",
+      "paymentType": "upi",
+      "phone": "9691873040",
+      "registrationId": "REG1791916408839",
+      "utr": "218015397606"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T18:32:29.418Z",
+      "email": "deveshofficial777@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)",
+        "Pitchverse (Genesis)",
+        "Robowar (RoboZar)",
+        "SM-Agri (Inventia)",
+        "Brand Blitz (Genesis)"
+      ],
+      "name": "Devesh Patil",
+      "paymentType": "upi",
+      "phone": "8308265113",
+      "registrationId": "REG1791916349417",
+      "utr": "665392081077"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T18:28:59.073Z",
+      "email": "pratikgore706@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)",
+        "Pitchverse (Genesis)",
+        "Pixel Wizard (Plexus)",
+        "Brand Blitz (Genesis)",
+        "Aerostrike (Atomheimer)"
+      ],
+      "name": "Pratik Panditrao Gore",
+      "paymentType": "upi",
+      "phone": "8421105364",
+      "registrationId": "REG1791916139071",
+      "utr": "359201226197"
+    },
+    {
+      "amount": 1198,
+      "createdAt": "2026-10-13T18:26:57.039Z",
+      "email": "prabhleenkaur1206@gmail.com",
+      "events": [
+        "Pixel Wizard (Plexus)",
+        "Hackathon (Karyarachna)",
+        "Pitchverse (Genesis)",
+        "Heuristic Havoc (Competitive Programming) (Plexus)",
+        "Case Ethical Crosstalk (Genesis)"
+      ],
+      "name": "Prabhleen Kaur",
+      "paymentType": "upi",
+      "phone": "7347341254",
+      "registrationId": "REG1791916017036",
+      "utr": "665292057265"
+    },
+    {
+      "amount": 749,
+      "createdAt": "2026-10-13T18:25:10.355Z",
+      "email": "ravanisdead51@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)",
+        "Kritrim - Model Exhibition (Karyarachna)",
+        "Soldering Speedrun (Electrica)",
+        "Breadboard Battle (Electrica)",
+        "RoboSoccer (RoboZar)",
+        "Case Ethical Crosstalk (Genesis)"
+      ],
+      "name": "Sudhanshu Verma",
+      "paymentType": "upi",
+      "phone": "7696047366",
+      "registrationId": "REG1791915910354",
+      "utr": "628663472154"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T18:24:32.155Z",
+      "email": "rajveernayma1902@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)",
+        "RC Car (RoboZar)",
+        "Kritrim - Model Exhibition (Karyarachna)",
+        "Case Ethical Crosstalk (Genesis)",
+        "SM-Agri (Inventia)"
+      ],
+      "name": "Rajveer nayama",
+      "paymentType": "upi",
+      "phone": "9238486265",
+      "registrationId": "REG1791915872154",
+      "utr": "879892564832"
+    },
+    {
+      "amount": 1196,
+      "createdAt": "2026-10-13T18:16:37.371Z",
+      "email": "ayushkamti2005@gmail.com",
+      "events": [
+        "RC Car (RoboZar)",
+        "Rapid Line (LFR) (RoboZar)",
+        "Hovermania (RoboZar)",
+        "RC Boat (RoboZar)",
+        "Splash Rocket (Atomheimer)"
+      ],
+      "name": "Aayush kumar",
+      "paymentType": "upi",
+      "phone": "8409980883",
+      "registrationId": "REG1791915397368",
+      "utr": "036307311368"
+    },
+    {
+      "amount": 299,
+      "createdAt": "2026-10-13T16:44:43.657Z",
+      "email": "prajolnayak408@gmail.com",
+      "events": [
+        "Robowar (RoboZar)",
+        "Micromouse Challenge (RoboZar)",
+        "RC Boat (RoboZar)",
+        "RC Car (RoboZar)",
+        "Sky Maneuver (RoboZar)",
+        "Breadboard Battle (Electrica)",
+        "Soldering Speedrun (Electrica)",
+        "RoboSoccer (RoboZar)"
+      ],
+      "name": "Prajol Nayak",
+      "paymentType": "upi",
+      "phone": "9124289408",
+      "registrationId": "REG1791909883654",
+      "utr": "955200155026"
+    },
     {
       "amount": 1198,
       "createdAt": "2026-10-13T15:10:14.661Z",
@@ -443,6 +649,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 27,
-  "unreviewed_total_amount": 30847.0
+  "unreviewed_count": 39,
+  "unreviewed_total_amount": 39081.0
 }
