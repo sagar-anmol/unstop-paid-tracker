@@ -1,7 +1,57 @@
 {
-  "generated_at": "2026-10-13T00:46:06.432596+00:00",
+  "generated_at": "2026-10-13T07:47:01.308754+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T07:46:46.866Z",
+      "email": "diyaarora2607@gmail.com",
+      "events": [
+        "Jugaad (Karyarachna)",
+        "Chemi-Thone (Chemica)",
+        "Techno-Vation (Inventia)",
+        "Pitchverse (Genesis)",
+        "Pixel Wizard (Plexus)"
+      ],
+      "name": "Diya Arora",
+      "paymentType": "upi",
+      "phone": "6280185596",
+      "registrationId": "REG1791877606865",
+      "utr": "005826265288"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T07:37:08.952Z",
+      "email": "kaurgursharan78933@gmail.com",
+      "events": [
+        "Pitchverse (Genesis)",
+        "Pixel Wizard (Plexus)",
+        "Chemi-Thone (Chemica)",
+        "Jugaad (Karyarachna)"
+      ],
+      "name": "Gursharandeep kaur",
+      "paymentType": "upi",
+      "phone": "7888692293",
+      "registrationId": "REG1791877028945",
+      "utr": "005826020445"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-13T07:29:03.017Z",
+      "email": "riyagoyal1375@gmail.com",
+      "events": [
+        "Pitchverse (Genesis)",
+        "Jugaad (Karyarachna)",
+        "Pixel Wizard (Plexus)",
+        "Soap Making (Chemica)",
+        "Chemi-Thone (Chemica)"
+      ],
+      "name": "Riya",
+      "paymentType": "upi",
+      "phone": "6284910571",
+      "registrationId": "REG1791876543016",
+      "utr": "005825705748"
+    },
     {
       "amount": 4792,
       "createdAt": "2026-10-12T18:11:03.065Z",
@@ -313,6 +363,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 19,
-  "unreviewed_total_amount": 23659.0
+  "unreviewed_count": 22,
+  "unreviewed_total_amount": 25456.0
 }
