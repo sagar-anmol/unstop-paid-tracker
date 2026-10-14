@@ -1,7 +1,109 @@
 {
-  "generated_at": "2026-10-14T17:16:40.858268+00:00",
+  "generated_at": "2026-10-14T20:47:13.896765+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 599,
+      "createdAt": "2026-10-14T18:46:11.697Z",
+      "email": "guntijoy1202@gmail.com",
+      "events": [
+        "Pitchverse (Genesis)",
+        "Techno-Vation (Inventia)",
+        "Pixel Wizard (Plexus)",
+        "Hackathon (Karyarachna)",
+        "SM-Agri (Inventia)"
+      ],
+      "name": "Fastotrian",
+      "paymentType": "upi",
+      "phone": "6305453697",
+      "registrationId": "REG1792003571686",
+      "utr": "628807086128"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-14T18:28:56.883Z",
+      "email": "sidmedsen2004@gmail.com",
+      "events": [
+        "Hackathon (Karyarachna)",
+        "Techno-Vation (Inventia)",
+        "Brand Blitz (Genesis)",
+        "Case Crack (Genesis)",
+        "Pitchverse (Genesis)"
+      ],
+      "name": "Medhansh Sen",
+      "paymentType": "upi",
+      "phone": "7047644308",
+      "registrationId": "REG1792002536883",
+      "utr": "628707074969"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-14T18:28:39.690Z",
+      "email": "sharmasaksham1605@gmail.com",
+      "events": [
+        "Pixel Wizard (Plexus)",
+        "Hackathon (Karyarachna)",
+        "Pitchverse (Genesis)",
+        "SM-Agri (Inventia)",
+        "Techno-Vation (Inventia)"
+      ],
+      "name": "Saksham Sharma",
+      "paymentType": "upi",
+      "phone": "8957630319",
+      "registrationId": "REG1792002519689",
+      "utr": "063345795096"
+    },
+    {
+      "amount": 299,
+      "createdAt": "2026-10-14T18:28:37.736Z",
+      "email": "priyansh.patel.1304@gmail.com",
+      "events": [
+        "Pixel Wizard (Plexus)",
+        "Pitchverse (Genesis)",
+        "SM-Agri (Inventia)",
+        "Hackathon (Karyarachna)",
+        "Techno-Vation (Inventia)"
+      ],
+      "name": "Priyansh K Patel",
+      "paymentType": "upi",
+      "phone": "9694130406",
+      "registrationId": "REG1792002517736",
+      "utr": "706978120113"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-14T18:28:09.779Z",
+      "email": "adityarana2424a@gmail.com",
+      "events": [
+        "Pixel Wizard (Plexus)",
+        "Hackathon (Karyarachna)",
+        "Pitchverse (Genesis)",
+        "SM-Agri (Inventia)",
+        "Techno-Vation (Inventia)"
+      ],
+      "name": "aditya rana",
+      "paymentType": "upi",
+      "phone": "9253296764",
+      "registrationId": "REG1792002489774",
+      "utr": "005879371130"
+    },
+    {
+      "amount": 1198,
+      "createdAt": "2026-10-14T18:08:01.377Z",
+      "email": "nityaagarwalhmk@gmail.com",
+      "events": [
+        "Food Forensics (Food-O-Crats)",
+        "Pixel Wizard (Plexus)",
+        "Fabriquer (Mechanica)",
+        "Aerostrike (Atomheimer)",
+        "Quiz Nova (Atomheimer)"
+      ],
+      "name": "Shivangi anand ",
+      "paymentType": "upi",
+      "phone": "9057686137",
+      "registrationId": "REG1792001281373",
+      "utr": "665346961491"
+    },
     {
       "amount": 599,
       "createdAt": "2026-10-14T11:31:52.112Z",
@@ -746,6 +848,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 44,
-  "unreviewed_total_amount": 45069.0
+  "unreviewed_count": 50,
+  "unreviewed_total_amount": 48962.0
 }
