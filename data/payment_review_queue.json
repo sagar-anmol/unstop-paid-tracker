@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-14T12:04:58.412563+00:00",
+  "generated_at": "2026-10-14T17:16:40.858268+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
     {
@@ -22,7 +22,9 @@
       "createdAt": "2026-10-14T11:31:02.132Z",
       "email": "vipulsethi3465@gmail.com",
       "events": [
-        "Pitchverse (Genesis)"
+        "Pitchverse (Genesis)",
+        "Hackathon",
+        "Pitchverse"
       ],
       "name": "Vipul Sethi",
       "paymentType": "upi",
@@ -505,7 +507,9 @@
       "createdAt": "2026-10-12T11:14:39.851Z",
       "email": "tusharpb0329@gmail.com",
       "events": [
-        "Hackathon (Karyarachna)"
+        "Hackathon (Karyarachna)",
+        "Pitchverse (Genesis)",
+        "Chemi-Thone (Chemica)"
       ],
       "name": "Tushar",
       "paymentType": "upi",
