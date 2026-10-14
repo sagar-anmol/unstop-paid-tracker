@@ -1,7 +1,35 @@
 {
-  "generated_at": "2026-10-14T06:14:23.206444+00:00",
+  "generated_at": "2026-10-14T12:04:58.412563+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 599,
+      "createdAt": "2026-10-14T11:31:52.112Z",
+      "email": "kumarayush780510@gmail.com",
+      "events": [
+        "Robowar (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "RC Car (RoboZar)"
+      ],
+      "name": "Ayush Kumar ",
+      "paymentType": "upi",
+      "phone": "7986066725",
+      "registrationId": "REG1791977512111",
+      "utr": "628701169460"
+    },
+    {
+      "amount": 599,
+      "createdAt": "2026-10-14T11:31:02.132Z",
+      "email": "vipulsethi3465@gmail.com",
+      "events": [
+        "Pitchverse (Genesis)"
+      ],
+      "name": "Vipul Sethi",
+      "paymentType": "upi",
+      "phone": "9417566555",
+      "registrationId": "REG1791977462130",
+      "utr": "070311794534"
+    },
     {
       "amount": 1198,
       "createdAt": "2026-10-14T05:33:33.878Z",
@@ -342,7 +370,8 @@
         "Chemi-Thone (Chemica)",
         "Techno-Vation (Inventia)",
         "Pitchverse (Genesis)",
-        "Pixel Wizard (Plexus)"
+        "Pixel Wizard (Plexus)",
+        "Chemi throne"
       ],
       "name": "Diya Arora",
       "paymentType": "upi",
@@ -358,7 +387,8 @@
         "Pitchverse (Genesis)",
         "Pixel Wizard (Plexus)",
         "Chemi-Thone (Chemica)",
-        "Jugaad (Karyarachna)"
+        "Jugaad (Karyarachna)",
+        "Chemi throne"
       ],
       "name": "Gursharandeep kaur",
       "paymentType": "upi",
@@ -375,7 +405,8 @@
         "Jugaad (Karyarachna)",
         "Pixel Wizard (Plexus)",
         "Soap Making (Chemica)",
-        "Chemi-Thone (Chemica)"
+        "Chemi-Thone (Chemica)",
+        "Chemi throne"
       ],
       "name": "Riya",
       "paymentType": "upi",
@@ -460,7 +491,8 @@
         "RC Car (RoboZar)",
         "Hackathon (Karyarachna)",
         "Arduino Imagino (Electronica)",
-        "WPTC - Wireless Power Transfer (Electrica)"
+        "WPTC - Wireless Power Transfer (Electrica)",
+        "Chess"
       ],
       "name": "Parul Sharma",
       "paymentType": "upi",
@@ -486,7 +518,10 @@
       "createdAt": "2026-10-12T10:03:28.836Z",
       "email": "899.simar@gmail.com",
       "events": [
-        "Kritrim - Model Exhibition (Karyarachna)"
+        "Kritrim - Model Exhibition (Karyarachna)",
+        "Hackathon (Karyarachna)",
+        "Pitchverse (Genesis)",
+        "Chemi-Thone (Chemica)"
       ],
       "name": "Simarjit Kaur",
       "paymentType": "upi",
@@ -534,7 +569,8 @@
       "events": [
         "Pitchverse (Genesis)",
         "Hackathon (Karyarachna)",
-        "Ghost Code (Plexus)"
+        "Ghost Code (Plexus)",
+        "Case Crack"
       ],
       "name": "Ridhima Gupta",
       "paymentType": "upi",
@@ -584,7 +620,11 @@
         "Pixel Wizard (Plexus)",
         "Pitchverse (Genesis)",
         "Chemi-Thone (Chemica)",
-        "Jugaad (Karyarachna)"
+        "Jugaad (Karyarachna)",
+        "Brand Blitz",
+        "Chemi throne",
+        "Free Fire",
+        "techno"
       ],
       "name": "hardeep singh",
       "paymentType": "upi",
@@ -603,7 +643,10 @@
         "Clue Craze (Food-O-Crats)",
         "Food Forensics (Food-O-Crats)",
         "Food Forge (Food-O-Crats)",
-        "Techno-Vation (Inventia)"
+        "Techno-Vation (Inventia)",
+        "Innovation-X",
+        "Kritrim - Model Exhibition",
+        "aqua epoch"
       ],
       "name": "Anmol Kaur",
       "paymentType": "upi",
@@ -670,7 +713,9 @@
         "Techno-Vation (Inventia)",
         "Circuit Craft (Electronica)",
         "Quiz Nova (Atomheimer)",
-        "Heuristic Havoc (Competitive Programming) (Plexus)"
+        "Heuristic Havoc (Competitive Programming) (Plexus)",
+        "Hackathon",
+        "Soap Making"
       ],
       "name": "Yuvraj Sharma",
       "paymentType": "upi",
@@ -685,7 +730,10 @@
       "events": [
         "Pitchverse (Genesis)",
         "Hackathon (Karyarachna)",
-        "Foodprint (Food-O-Crats)"
+        "Foodprint (Food-O-Crats)",
+        "clue craze",
+        "food forensics",
+        "food print"
       ],
       "name": "Riya Bansal",
       "paymentType": "upi",
@@ -694,6 +742,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 42,
-  "unreviewed_total_amount": 43871.0
+  "unreviewed_count": 44,
+  "unreviewed_total_amount": 45069.0
 }

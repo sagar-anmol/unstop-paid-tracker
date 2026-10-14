@@ -615,11 +615,14 @@
     "899.simar@gmail.com": {
       "cancelled": false,
       "events": [
-        "Kritrim - Model Exhibition (Karyarachna)"
+        "Chemi-Thone (Chemica)",
+        "Hackathon (Karyarachna)",
+        "Kritrim - Model Exhibition (Karyarachna)",
+        "Pitchverse (Genesis)"
       ],
       "reverted": false,
-      "techfest26": 1,
-      "total": 1,
+      "techfest26": 4,
+      "total": 4,
       "unstop": 0
     },
     "a.mishika@iitg.ac.in": {
@@ -1359,12 +1362,13 @@
       "cancelled": false,
       "events": [
         "RC Car (RoboZar)",
+        "RoboSoccer",
         "Robowar (RoboZar)",
         "Sky Maneuver (RoboZar)"
       ],
       "reverted": false,
-      "techfest26": 3,
-      "total": 3,
+      "techfest26": 4,
+      "total": 4,
       "unstop": 0
     },
     "agnaypv3@gmail.com": {
@@ -2255,11 +2259,12 @@
         "Tech4Earth",
         "Tech4Earth (Food-O-Crats)",
         "Techno-Vation (Inventia)",
-        "The Aqua-Epoch"
+        "The Aqua-Epoch",
+        "aqua epoch"
       ],
       "reverted": false,
-      "techfest26": 7,
-      "total": 12,
+      "techfest26": 10,
+      "total": 13,
       "unstop": 5
     },
     "annikanancy680@gmail.com": {
@@ -3184,11 +3189,13 @@
         "Arduino Imagino (Electronica)",
         "Breadboard Battle (Electrica)",
         "Clue Craze (Food-O-Crats)",
-        "Food Forge (Food-O-Crats)"
+        "Food Forge (Food-O-Crats)",
+        "Pitchverse",
+        "food print"
       ],
       "reverted": false,
-      "techfest26": 4,
-      "total": 4,
+      "techfest26": 6,
+      "total": 6,
       "unstop": 0
     },
     "bansalriya796@gmail.com": {
@@ -3199,11 +3206,14 @@
         "Hackathon",
         "Hackathon (Karyarachna)",
         "Pitchverse",
-        "Pitchverse (Genesis)"
+        "Pitchverse (Genesis)",
+        "clue craze",
+        "food forensics",
+        "food print"
       ],
       "reverted": false,
-      "techfest26": 3,
-      "total": 6,
+      "techfest26": 6,
+      "total": 9,
       "unstop": 3
     },
     "bansalrohan587@gmail.com": {
@@ -4019,11 +4029,14 @@
     "dholpuriarajesh708@gmail.com": {
       "cancelled": false,
       "events": [
-        "Pitchverse (Genesis)"
+        "Hackathon",
+        "Pitchverse (Genesis)",
+        "clue craze",
+        "cognitive"
       ],
       "reverted": false,
-      "techfest26": 1,
-      "total": 1,
+      "techfest26": 4,
+      "total": 4,
       "unstop": 0
     },
     "dhritigautam.08@gmail.com": {
@@ -4165,6 +4178,7 @@
     "diyaarora2607@gmail.com": {
       "cancelled": false,
       "events": [
+        "Chemi throne",
         "Chemi-Thone (Chemica)",
         "Jugaad (Karyarachna)",
         "Pitchverse (Genesis)",
@@ -4172,8 +4186,8 @@
         "Techno-Vation (Inventia)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 6,
+      "total": 6,
       "unstop": 0
     },
     "diyac0989@gmail.com": {
@@ -4793,14 +4807,15 @@
       "cancelled": false,
       "events": [
         "Arduino Imagino (Electronica)",
+        "Chess",
         "Hackathon (Karyarachna)",
         "RC Car (RoboZar)",
         "Rapid Line (LFR) (RoboZar)",
         "WPTC - Wireless Power Transfer (Electrica)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 6,
+      "total": 6,
       "unstop": 0
     },
     "gulamsubhanidbest1@gmail.com": {
@@ -5254,14 +5269,15 @@
     "harsimran12130@gmail.com": {
       "cancelled": false,
       "events": [
+        "Chemi throne",
         "Chemi-Thone (Chemica)",
         "Free Fire (Kermis)",
         "Hackathon (Karyarachna)",
         "Pitchverse (Genesis)"
       ],
       "reverted": false,
-      "techfest26": 4,
-      "total": 4,
+      "techfest26": 5,
+      "total": 5,
       "unstop": 0
     },
     "harsimranhundal001@gmail.com": {
@@ -5525,14 +5541,15 @@
       "cancelled": false,
       "events": [
         "Arduino Imagino (Electronica)",
+        "Chess",
         "Hackathon (Karyarachna)",
         "RC Car (RoboZar)",
         "Rapid Line (LFR) (RoboZar)",
         "WPTC - Wireless Power Transfer (Electrica)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 6,
+      "total": 6,
       "unstop": 0
     },
     "inventiacor@techfest26.com": {
@@ -5600,6 +5617,7 @@
       "cancelled": false,
       "events": [
         "Brand Blitz (Genesis)",
+        "Chemi throne",
         "Chemi-Thone",
         "Chemi-Thone (Chemica)",
         "Free Fire (Kermis)",
@@ -5612,8 +5630,8 @@
         "Techno-Vation (Inventia)"
       ],
       "reverted": false,
-      "techfest26": 6,
-      "total": 11,
+      "techfest26": 7,
+      "total": 12,
       "unstop": 5
     },
     "ishanverma4261@gmail.com": {
@@ -6311,11 +6329,12 @@
         "Arduino Imagino (Electronica)",
         "Breadboard Battle (Electrica)",
         "Clue Craze (Food-O-Crats)",
-        "Food Forge (Food-O-Crats)"
+        "Food Forge (Food-O-Crats)",
+        "Pitchverse"
       ],
       "reverted": false,
-      "techfest26": 4,
-      "total": 4,
+      "techfest26": 5,
+      "total": 5,
       "unstop": 0
     },
     "kashishchouhan129@gmail.com": {
@@ -6349,14 +6368,15 @@
     "kaurgursharan78933@gmail.com": {
       "cancelled": false,
       "events": [
+        "Chemi throne",
         "Chemi-Thone (Chemica)",
         "Jugaad (Karyarachna)",
         "Pitchverse (Genesis)",
         "Pixel Wizard (Plexus)"
       ],
       "reverted": false,
-      "techfest26": 4,
-      "total": 4,
+      "techfest26": 5,
+      "total": 5,
       "unstop": 0
     },
     "kaurmanpreet63165@gmail.com": {
@@ -6480,8 +6500,11 @@
     "khokharhardeep4@gmail.com": {
       "cancelled": false,
       "events": [
+        "Brand Blitz",
+        "Chemi throne",
         "Chemi-Thone",
         "Chemi-Thone (Chemica)",
+        "Free Fire",
         "Hackathon",
         "Jugaad",
         "Jugaad (Karyarachna)",
@@ -6489,11 +6512,12 @@
         "Pitchverse (Genesis)",
         "Pixel Wizard",
         "Pixel Wizard (Plexus)",
-        "The Neural Nexus"
+        "The Neural Nexus",
+        "techno"
       ],
       "reverted": false,
-      "techfest26": 4,
-      "total": 10,
+      "techfest26": 8,
+      "total": 14,
       "unstop": 6
     },
     "khushidey583@gmail.com": {
@@ -6861,14 +6885,16 @@
       "cancelled": false,
       "events": [
         "Circuit Craft (Electronica)",
+        "Hackathon",
         "Heuristic Havoc (Competitive Programming) (Plexus)",
         "Pixel Wizard (Plexus)",
         "Quiz Nova (Atomheimer)",
+        "Soap Making",
         "Techno-Vation (Inventia)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 7,
+      "total": 7,
       "unstop": 0
     },
     "kuldeepwankhede53@gmail.com": {
@@ -6955,11 +6981,14 @@
     "kumarayush780510@gmail.com": {
       "cancelled": false,
       "events": [
-        "RC Car"
+        "RC Car",
+        "RC Car (RoboZar)",
+        "RoboSoccer (RoboZar)",
+        "Robowar (RoboZar)"
       ],
       "reverted": false,
-      "techfest26": 0,
-      "total": 1,
+      "techfest26": 3,
+      "total": 4,
       "unstop": 1
     },
     "kumardhruv44400@gmail.com": {
@@ -7799,14 +7828,15 @@
       "cancelled": false,
       "events": [
         "Chemi Craft (Chemica)",
+        "Chemi-Thone (Chemica)",
         "Free Fire (Kermis)",
         "Kritrim - Model Exhibition",
         "Kritrim - Model Exhibition (Karyarachna)",
         "Pitchverse (Genesis)"
       ],
       "reverted": false,
-      "techfest26": 4,
-      "total": 5,
+      "techfest26": 5,
+      "total": 6,
       "unstop": 1
     },
     "manisachdeva9909@gmail.com": {
@@ -9720,11 +9750,12 @@
         "Breadboard Battle",
         "Breadboard Battle (Electrica)",
         "Clue Craze (Food-O-Crats)",
-        "Food Forge (Food-O-Crats)"
+        "Food Forge (Food-O-Crats)",
+        "Pitchverse"
       ],
       "reverted": false,
-      "techfest26": 4,
-      "total": 5,
+      "techfest26": 5,
+      "total": 6,
       "unstop": 1
     },
     "patelmanthan9398@gmail.com": {
@@ -9954,14 +9985,15 @@
       "cancelled": false,
       "events": [
         "Brand Blitz (Genesis)",
+        "Chemi throne",
         "Chemi-Thone (Chemica)",
         "Pixel Wizard (Plexus)",
         "Soap Making (Chemica)",
         "Techno-Vation (Inventia)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 6,
+      "total": 6,
       "unstop": 0
     },
     "pragya.pandey2028@sims.edu": {
@@ -10324,11 +10356,12 @@
     "priyarani27353@gmail.com": {
       "cancelled": false,
       "events": [
+        "Hackathon",
         "Pitchverse (Genesis)"
       ],
       "reverted": false,
-      "techfest26": 1,
-      "total": 1,
+      "techfest26": 2,
+      "total": 2,
       "unstop": 0
     },
     "pruthvi6.tech@gmail.com": {
@@ -10346,14 +10379,15 @@
       "cancelled": false,
       "events": [
         "Arduino Imagino (Electronica)",
+        "Chess",
         "Hackathon (Karyarachna)",
         "RC Car (RoboZar)",
         "Rapid Line (LFR) (RoboZar)",
         "WPTC - Wireless Power Transfer (Electrica)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 6,
+      "total": 6,
       "unstop": 0
     },
     "pujameens20@gmail.com": {
@@ -10949,11 +10983,13 @@
         "Breadboard Battle (Electrica)",
         "Clue Craze",
         "Clue Craze (Food-O-Crats)",
-        "Food Forge (Food-O-Crats)"
+        "Food Forge (Food-O-Crats)",
+        "Pitchverse",
+        "food print"
       ],
       "reverted": false,
-      "techfest26": 4,
-      "total": 5,
+      "techfest26": 6,
+      "total": 7,
       "unstop": 1
     },
     "ravirajpandey087@gmail.com": {
@@ -11051,13 +11087,14 @@
     "ridhimag0007@gmail.com": {
       "cancelled": false,
       "events": [
+        "Case Crack",
         "Ghost Code (Plexus)",
         "Hackathon (Karyarachna)",
         "Pitchverse (Genesis)"
       ],
       "reverted": false,
-      "techfest26": 3,
-      "total": 3,
+      "techfest26": 4,
+      "total": 4,
       "unstop": 0
     },
     "rishabhkumar3044@gmail.com": {
@@ -11285,6 +11322,7 @@
     "riyagoyal1375@gmail.com": {
       "cancelled": false,
       "events": [
+        "Chemi throne",
         "Chemi-Thone (Chemica)",
         "Jugaad (Karyarachna)",
         "Pitchverse (Genesis)",
@@ -11292,8 +11330,8 @@
         "Soap Making (Chemica)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 6,
+      "total": 6,
       "unstop": 0
     },
     "riyarai18112009@gmail.com": {
@@ -12121,12 +12159,14 @@
         "Chess (Kermis)",
         "City Model Exhibition (Civicon)",
         "Hackathon (Karyarachna)",
+        "Kritrim - Model Exhibition",
         "Pixel Wizard (Plexus)",
-        "Quiz Nova (Atomheimer)"
+        "Quiz Nova (Atomheimer)",
+        "big bull"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 7,
+      "total": 7,
       "unstop": 0
     },
     "sannihithpachalla@gmail.com": {
@@ -12745,11 +12785,12 @@
         "Cognitive Challenges (Inventia)",
         "Pitchverse (Genesis)",
         "Pixel Wizard (Plexus)",
-        "Tech4Earth (Food-O-Crats)"
+        "Tech4Earth (Food-O-Crats)",
+        "The Neural Nexus"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 6,
+      "total": 6,
       "unstop": 0
     },
     "shashank765422@gmail.com": {
@@ -13219,6 +13260,7 @@
       "cancelled": false,
       "events": [
         "Chemi Craft (Chemica)",
+        "Chemi-Thone (Chemica)",
         "Free Fire (Kermis)",
         "Hackathon",
         "Kritrim - Model Exhibition",
@@ -13226,8 +13268,8 @@
         "Pitchverse (Genesis)"
       ],
       "reverted": false,
-      "techfest26": 4,
-      "total": 6,
+      "techfest26": 6,
+      "total": 7,
       "unstop": 2
     },
     "shudhanshu_254074059@sliet.ac.in": {
@@ -13555,14 +13597,16 @@
       "cancelled": false,
       "events": [
         "Circuit Craft (Electronica)",
+        "Hackathon",
         "Heuristic Havoc (Competitive Programming) (Plexus)",
         "Pixel Wizard (Plexus)",
         "Quiz Nova (Atomheimer)",
+        "Soap Making",
         "Techno-Vation (Inventia)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 7,
+      "total": 7,
       "unstop": 0
     },
     "sk0078940@gmail.com": {
@@ -13836,15 +13880,18 @@
     "sonaminsan769@gmail.com": {
       "cancelled": false,
       "events": [
+        "Brand Blitz",
+        "Chemi throne",
         "Chemi-Thone (Chemica)",
         "Chess (Kermis)",
         "Clue Craze (Food-O-Crats)",
         "Cognitive Challenges (Inventia)",
+        "Ethical Crosstalk",
         "Pitchverse (Genesis)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 8,
+      "total": 8,
       "unstop": 0
     },
     "soniabajwa7600@gmail.com": {
@@ -15161,15 +15208,18 @@
     "vermarobin162@gmail.com": {
       "cancelled": false,
       "events": [
+        "Brand Blitz",
+        "Chemi throne",
         "Chemi-Thone (Chemica)",
         "Chess (Kermis)",
         "Clue Craze (Food-O-Crats)",
         "Cognitive Challenges (Inventia)",
+        "Ethical Crosstalk",
         "Pitchverse (Genesis)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 8,
+      "total": 8,
       "unstop": 0
     },
     "version3.0123@gmail.com": {
@@ -15294,6 +15344,16 @@
       "techfest26": 0,
       "total": 1,
       "unstop": 1
+    },
+    "vipulsethi3465@gmail.com": {
+      "cancelled": false,
+      "events": [
+        "Pitchverse (Genesis)"
+      ],
+      "reverted": false,
+      "techfest26": 1,
+      "total": 1,
+      "unstop": 0
     },
     "vishal7192000@gmail.com": {
       "cancelled": false,
@@ -15651,14 +15711,16 @@
       "cancelled": false,
       "events": [
         "Circuit Craft (Electronica)",
+        "Hackathon",
         "Heuristic Havoc (Competitive Programming) (Plexus)",
         "Pixel Wizard (Plexus)",
         "Quiz Nova (Atomheimer)",
+        "Soap Making",
         "Techno-Vation (Inventia)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 7,
+      "total": 7,
       "unstop": 0
     },
     "yugg4950@gmail.com": {
@@ -15689,14 +15751,15 @@
       "cancelled": false,
       "events": [
         "Arduino Imagino (Electronica)",
+        "Chess",
         "Hackathon (Karyarachna)",
         "RC Car (RoboZar)",
         "Rapid Line (LFR) (RoboZar)",
         "WPTC - Wireless Power Transfer (Electrica)"
       ],
       "reverted": false,
-      "techfest26": 5,
-      "total": 5,
+      "techfest26": 6,
+      "total": 6,
       "unstop": 0
     },
     "zawar_ia@mt.iitr.ac.in": {
@@ -15770,8 +15833,8 @@
       "unstop": 61
     }
   },
-  "generated_at": "2026-10-14T06:14:23.420542+00:00",
+  "generated_at": "2026-10-14T12:04:58.644527+00:00",
   "note": "email -> events entered. Generated by scripts/build_participant_events_index.py",
-  "people": 1155,
+  "people": 1156,
   "unstop_people": 1044
 }
