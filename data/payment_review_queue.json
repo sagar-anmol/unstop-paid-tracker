@@ -1,7 +1,52 @@
 {
-  "generated_at": "2026-10-14T01:15:40.266059+00:00",
+  "generated_at": "2026-10-14T06:14:23.206444+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 1198,
+      "createdAt": "2026-10-14T05:33:33.878Z",
+      "email": "janvee.t1109@gmail.com",
+      "events": [
+        "Kritrim - Model Exhibition (Karyarachna)",
+        "Chemi Craft (Chemica)",
+        "Pitchverse (Genesis)"
+      ],
+      "name": "Janvee ",
+      "paymentType": "upi",
+      "phone": "9915120348",
+      "registrationId": "REG1791956013876",
+      "utr": "218033440268"
+    },
+    {
+      "amount": 1196,
+      "createdAt": "2026-10-14T05:22:32.694Z",
+      "email": "jotwalia225@gmail.com",
+      "events": [
+        "Chemi-Mystery (Chemica)",
+        "Chemi Craft (Chemica)",
+        "SM-Agri (Inventia)"
+      ],
+      "name": "Lovejot singh ",
+      "paymentType": "upi",
+      "phone": "6284484215",
+      "registrationId": "REG1791955352693",
+      "utr": "218032736094"
+    },
+    {
+      "amount": 2396,
+      "createdAt": "2026-10-14T05:21:57.601Z",
+      "email": "lavanyabansal68029@gmail.com",
+      "events": [
+        "Pitchverse (Genesis)",
+        "Hackathon (Karyarachna)",
+        "Jugaad (Karyarachna)"
+      ],
+      "name": "Lavanya Bansal",
+      "paymentType": "upi",
+      "phone": "9217929807",
+      "registrationId": "REG1791955317599",
+      "utr": "100804931358"
+    },
     {
       "amount": 599,
       "createdAt": "2026-10-13T18:48:37.034Z",
@@ -649,6 +694,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 39,
-  "unreviewed_total_amount": 39081.0
+  "unreviewed_count": 42,
+  "unreviewed_total_amount": 43871.0
 }
