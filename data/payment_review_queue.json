@@ -1,7 +1,29 @@
 {
-  "generated_at": "2026-10-17T04:34:15.594094+00:00",
+  "generated_at": "2026-10-17T09:26:26.913864+00:00",
   "note": "Payments with a UTR that have not yet been matched against the bank statement. Confirm each UTR, then add it to 'reviewed_utrs' in data/payment_status_overrides.json to clear it from this list.",
   "records": [
+    {
+      "amount": 1495,
+      "createdAt": "2026-10-17T07:30:41.083Z",
+      "email": "san71sehgal@gmail.com",
+      "events": [],
+      "name": "Samridh Sehgal",
+      "paymentType": "",
+      "phone": "6284582522",
+      "registrationId": "ONSPOT-MVC2UJP1",
+      "utr": "MOB27cb99201caf1a5"
+    },
+    {
+      "amount": 1495,
+      "createdAt": "2026-10-17T07:23:01.100Z",
+      "email": "kabir2551031@gndec.ac.in",
+      "events": [],
+      "name": "Kabir Verma",
+      "paymentType": "",
+      "phone": "9888458697",
+      "registrationId": "ONSPOT-MVC2KORQ",
+      "utr": "MOB27cb990177dc289"
+    },
     {
       "amount": 1198,
       "createdAt": "2026-10-16T11:27:36.091Z",
@@ -986,6 +1008,6 @@
       "utr": "664907396224"
     }
   ],
-  "unreviewed_count": 60,
-  "unreviewed_total_amount": 55547.0
+  "unreviewed_count": 62,
+  "unreviewed_total_amount": 58537.0
 }
